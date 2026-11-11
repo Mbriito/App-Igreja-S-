@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
-import { Megaphone, Calendar, Users, Send, CheckCircle, Image as ImageIcon, X } from 'lucide-react';
+import { Megaphone, Calendar, Users, Send, CheckCircle, Image as ImageIcon, X, Edit3 } from 'lucide-react';
 
 export const Admin: React.FC = () => {
   const { profile } = useAuth();
@@ -42,16 +42,49 @@ export const Admin: React.FC = () => {
   React.useEffect(() => {
     if (tab === 'members') {
       fetchMembers();
+    } else if (tab === 'notices') {
+      fetchNotices();
     }
   }, [tab]);
 
   // Notice Form
+  const [notices, setNotices] = useState<any[]>([]);
+  const [editingNotice, setEditingNotice] = useState<any | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isEvent, setIsEvent] = useState(false);
   const [eventDate, setEventDate] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  const fetchNotices = async () => {
+    const { data, error } = await supabase
+      .from('notices')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (!error) {
+      setNotices(data || []);
+    }
+  };
+
+  const handleEditNotice = (notice: any) => {
+    setEditingNotice(notice);
+    setTitle(notice.title);
+    setContent(notice.content);
+    setIsEvent(notice.is_event);
+    setEventDate(notice.event_date ? notice.event_date.substring(0, 16) : '');
+    setImagePreview(notice.image_url);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteNotice = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este aviso?')) return;
+    const { error } = await supabase.from('notices').delete().eq('id', id);
+    if (!error) {
+      setNotices(prev => prev.filter(n => n.id !== id));
+      showSuccess();
+    }
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -95,19 +128,23 @@ export const Admin: React.FC = () => {
     e.preventDefault();
     setLoading(true);
 
-    let imageUrl = null;
+    let imageUrl = editingNotice?.image_url || null;
     if (imageFile) {
       imageUrl = await uploadImage(imageFile);
     }
 
-    const { error } = await supabase.from('notices').insert({
+    const noticeData = {
       title,
       content,
       image_url: imageUrl,
       is_event: isEvent,
       event_date: isEvent ? eventDate : null,
       created_by: profile.id
-    });
+    };
+
+    const { error } = editingNotice 
+      ? await supabase.from('notices').update(noticeData).eq('id', editingNotice.id)
+      : await supabase.from('notices').insert(noticeData);
 
     if (!error) {
       setTitle('');
@@ -116,6 +153,8 @@ export const Admin: React.FC = () => {
       setEventDate('');
       setImageFile(null);
       setImagePreview(null);
+      setEditingNotice(null);
+      fetchNotices();
       showSuccess();
     }
     setLoading(false);
@@ -188,93 +227,160 @@ export const Admin: React.FC = () => {
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
         {tab === 'notices' ? (
-          <form onSubmit={handleCreateNotice} className="space-y-6">
-            {/* ... form fields for notices ... */}
-            <div className="space-y-1">
-              <label className="text-sm font-bold text-slate-700">Título do Aviso</label>
-              <input
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-200 outline-none"
-                placeholder="Ex: Culto de Jovens"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-sm font-bold text-slate-700">Conteúdo</label>
-              <textarea
-                required
-                rows={4}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-200 outline-none resize-none"
-                placeholder="Descreva as informações importantes..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700">Foto do Mural (Opcional)</label>
-              {!imagePreview ? (
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <ImageIcon className="w-8 h-8 text-slate-300 mb-2" />
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Toque para selecionar</p>
-                  </div>
-                  <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
-                </label>
-              ) : (
-                <div className="relative w-full h-48 rounded-2xl overflow-hidden border border-slate-100">
-                  <img src={imagePreview} className="w-full h-full object-cover" alt="Preview" />
-                  <button
-                    type="button"
-                    onClick={() => { setImageFile(null); setImagePreview(null); }}
-                    className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur rounded-full text-rose-500 shadow-sm"
+          <div className="space-y-10">
+            <form onSubmit={handleCreateNotice} className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest">
+                  {editingNotice ? 'Editar Aviso' : 'Novo Aviso'}
+                </h3>
+                {editingNotice && (
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setEditingNotice(null);
+                      setTitle('');
+                      setContent('');
+                      setIsEvent(false);
+                      setEventDate('');
+                      setImagePreview(null);
+                    }}
+                    className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:underline"
                   >
-                    <X className="w-4 h-4" />
+                    Cancelar Edição
                   </button>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-              <input
-                type="checkbox"
-                id="is_event"
-                checked={isEvent}
-                onChange={(e) => setIsEvent(e.target.checked)}
-                className="w-5 h-5 rounded border-slate-300 text-[#df982a] focus:ring-[#df982a]"
-              />
-              <label htmlFor="is_event" className="flex-1 text-sm text-slate-700 font-bold cursor-pointer">
-                Este aviso é um Evento com data?
-              </label>
-            </div>
-
-            {isEvent && (
               <div className="space-y-1">
-                <label className="text-sm font-bold text-slate-700">Data e Hora</label>
+                <label className="text-sm font-bold text-slate-700">Título do Aviso</label>
                 <input
-                  type="datetime-local"
                   required
-                  value={eventDate}
-                  onChange={(e) => setEventDate(e.target.value)}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-200 outline-none"
+                  placeholder="Ex: Culto de Jovens"
                 />
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-4 bg-[#df982a] text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-orange-100 hover:bg-orange-600 disabled:opacity-50 flex items-center justify-center gap-2 transition-all active:scale-95"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <><Send className="w-5 h-5" /> Publicar no Mural</>
+              <div className="space-y-1">
+                <label className="text-sm font-bold text-slate-700">Conteúdo</label>
+                <textarea
+                  required
+                  rows={4}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-200 outline-none resize-none"
+                  placeholder="Descreva as informações importantes..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Foto do Mural (Opcional)</label>
+                {!imagePreview ? (
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <ImageIcon className="w-8 h-8 text-slate-300 mb-2" />
+                      <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Toque para selecionar</p>
+                    </div>
+                    <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+                  </label>
+                ) : (
+                  <div className="relative w-full h-48 rounded-2xl overflow-hidden border border-slate-100">
+                    <img src={imagePreview} className="w-full h-full object-cover" alt="Preview" />
+                    <button
+                      type="button"
+                      onClick={() => { setImageFile(null); setImagePreview(null); }}
+                      className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur rounded-full text-rose-500 shadow-sm"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <input
+                  type="checkbox"
+                  id="is_event"
+                  checked={isEvent}
+                  onChange={(e) => setIsEvent(e.target.checked)}
+                  className="w-5 h-5 rounded border-slate-300 text-[#df982a] focus:ring-[#df982a]"
+                />
+                <label htmlFor="is_event" className="flex-1 text-sm text-slate-700 font-bold cursor-pointer">
+                  Este aviso é um Evento com data?
+                </label>
+              </div>
+
+              {isEvent && (
+                <div className="space-y-1">
+                  <label className="text-sm font-bold text-slate-700">Data e Hora</label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={eventDate}
+                    onChange={(e) => setEventDate(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-200 outline-none"
+                  />
+                </div>
               )}
-            </button>
-          </form>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-[#df982a] text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-orange-100 hover:bg-orange-600 disabled:opacity-50 flex items-center justify-center gap-2 transition-all active:scale-95"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>{editingNotice ? <><CheckCircle className="w-5 h-5" /> Salvar Alterações</> : <><Send className="w-5 h-5" /> Publicar no Mural</>}</>
+                )}
+              </button>
+            </form>
+
+            <div className="pt-10 border-t border-slate-100">
+              <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest mb-6">Avisos Ativos</h3>
+              <div className="grid gap-4">
+                {notices.map(notice => (
+                  <div key={notice.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {notice.image_url ? (
+                        <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
+                          <img src={notice.image_url} className="w-full h-full object-cover" alt="" />
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-slate-200 flex items-center justify-center text-slate-400 flex-shrink-0">
+                          <Megaphone className="w-5 h-5" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-slate-900 truncate">{notice.title}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">
+                          {notice.is_event ? 'Evento' : 'Comunicado'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => handleEditNotice(notice)}
+                        className="p-2 bg-white text-slate-600 rounded-lg shadow-sm hover:text-[#df982a]"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteNotice(notice.id)}
+                        className="p-2 bg-white text-rose-500 rounded-lg shadow-sm hover:bg-rose-50"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {notices.length === 0 && (
+                  <p className="text-center text-slate-400 text-sm py-4 italic">Nenhum aviso publicado ainda.</p>
+                )}
+              </div>
+            </div>
+          </div>
         ) : tab === 'schedules' ? (
           <form onSubmit={handleCreateSchedule} className="space-y-4">
             <div className="space-y-1">
