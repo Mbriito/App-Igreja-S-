@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
-import { LogIn, UserPlus, Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
+import { LogIn, UserPlus, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetSent, setResetSent] = useState(false);
+  const [view, setView] = useState<'login' | 'forgot'>('login');
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -18,12 +20,96 @@ export const Login: React.FC = () => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      setError(error.message);
+      setError(error.message === 'Email not confirmed' 
+        ? 'Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou peça ao admin para desabilitar a confirmação no Supabase.' 
+        : error.message);
       setLoading(false);
     } else {
       navigate('/');
     }
   };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/perfil`,
+    });
+
+    if (error) {
+      setError(error.message);
+    } else {
+      setResetSent(true);
+    }
+    setLoading(false);
+  };
+
+  if (view === 'forgot') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 relative overflow-hidden">
+        <div className="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl p-10 space-y-8 relative z-10 border border-white">
+          <div className="text-center space-y-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-50 text-[#df982a]">
+              <Lock className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-black text-slate-900">Esqueci a Senha</h2>
+            <p className="text-sm text-slate-500 font-medium">Digite seu e-mail para receber as instruções de recuperação.</p>
+          </div>
+
+          {resetSent ? (
+            <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-3xl text-center space-y-4">
+              <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto" />
+              <p className="text-emerald-800 text-sm font-bold">Link enviado!</p>
+              <p className="text-emerald-600 text-xs">Verifique sua caixa de entrada para redefinir sua senha.</p>
+              <button 
+                onClick={() => setView('login')}
+                className="w-full py-3 bg-white border border-emerald-200 text-emerald-700 rounded-xl text-xs font-black uppercase tracking-widest"
+              >
+                Voltar ao Login
+              </button>
+            </div>
+          ) : (
+            <form className="space-y-6" onSubmit={handleForgotPassword}>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">E-mail de Cadastro</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-orange-100 focus:border-[#df982a] outline-none text-sm font-medium"
+                    placeholder="exemplo@email.com"
+                  />
+                </div>
+              </div>
+
+              {error && <p className="text-rose-500 text-xs font-bold text-center">{error}</p>}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-5 bg-slate-900 text-white font-black uppercase tracking-widest rounded-2xl shadow-xl transition-all active:scale-95 disabled:opacity-50"
+              >
+                {loading ? 'Enviando...' : 'Enviar Link'}
+              </button>
+
+              <button 
+                type="button"
+                onClick={() => setView('login')}
+                className="w-full text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-slate-600"
+              >
+                Voltar
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 relative overflow-hidden">
@@ -56,7 +142,7 @@ export const Login: React.FC = () => {
         </div>
 
         {error && (
-          <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl text-rose-600 text-xs font-bold animate-in shake duration-500">
+          <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl text-rose-600 text-[10px] leading-tight font-bold animate-in shake duration-500">
             {error}
           </div>
         )}
@@ -78,7 +164,16 @@ export const Login: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Sua Senha</label>
+            <div className="flex items-center justify-between px-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Sua Senha</label>
+              <button 
+                type="button"
+                onClick={() => setView('forgot')}
+                className="text-[10px] font-black text-[#df982a] uppercase tracking-widest hover:underline"
+              >
+                Esqueci a senha
+              </button>
+            </div>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
               <input
@@ -124,6 +219,7 @@ export const Register: React.FC = () => {
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [registered, setRegistered] = useState(false);
   const navigate = useNavigate();
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -131,7 +227,7 @@ export const Register: React.FC = () => {
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -145,9 +241,45 @@ export const Register: React.FC = () => {
       setError(error.message);
       setLoading(false);
     } else {
-      navigate('/login');
+      // Se o usuário já tiver uma sessão, significa que a confirmação está desabilitada
+      if (data.session) {
+        navigate('/');
+      } else {
+        setRegistered(true);
+        setLoading(false);
+      }
     }
   };
+
+  if (registered) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <div className="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl p-10 text-center space-y-6">
+          <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto">
+            <CheckCircle className="w-10 h-10" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900">Cadastro Realizado!</h2>
+          <p className="text-sm text-slate-500 font-medium">
+            Se a confirmação de e-mail estiver ativa, verifique sua caixa de entrada. 
+            Caso contrário, você já pode fazer login.
+          </p>
+          <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl text-left">
+            <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1">Dica para o Admin:</p>
+            <p className="text-[10px] text-amber-600 leading-tight">
+              Para evitar erros 404 e facilitar o acesso, desabilite <strong>"Confirm Email"</strong> em 
+              {" Authentication > Providers > Email "} no painel do Supabase.
+            </p>
+          </div>
+          <Link 
+            to="/login"
+            className="block w-full py-4 bg-slate-900 text-white font-black uppercase tracking-widest rounded-2xl"
+          >
+            Ir para Login
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 relative overflow-hidden">
