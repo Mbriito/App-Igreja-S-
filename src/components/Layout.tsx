@@ -52,6 +52,23 @@ export const Layout: React.FC = () => {
       <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-6">
         <OfflineIndicator />
         <Outlet />
+        
+        {/* Footer Info */}
+        <footer className="mt-12 mb-20 py-8 border-t border-slate-100 flex flex-col items-center text-center space-y-4">
+          <div className="space-y-1">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contato da Igreja</p>
+            <a 
+              href="mailto:secretaria@aigrejadavila-se.online" 
+              className="text-sm font-bold text-slate-600 hover:text-[#df982a] transition-colors"
+            >
+              secretaria@aigrejadavila-se.online
+            </a>
+          </div>
+          <div className="pt-4">
+            <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.3em]">Desenvolvido por</p>
+            <p className="text-sm font-black text-slate-400">Gratech Solucoes de Ti</p>
+          </div>
+        </footer>
       </main>
 
       {/* Bottom Navigation */}
