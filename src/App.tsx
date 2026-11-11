@@ -7,7 +7,7 @@ import { Schedules } from '@/pages/Schedules';
 import { Prayers } from '@/pages/Prayers';
 import { Profile } from '@/pages/Profile';
 import { Admin } from '@/pages/Admin';
-import { Login, Register } from '@/pages/Auth';
+import { Login, Register, ResetPassword } from '@/pages/Auth';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -42,6 +42,7 @@ export default function App() {
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<Register />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Protected Routes */}
           <Route

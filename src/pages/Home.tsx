@@ -92,13 +92,13 @@ export const Home: React.FC = () => {
           {notices.map((notice) => (
             <div key={notice.id} className="group relative bg-white rounded-[2.5rem] shadow-sm hover:shadow-xl hover:shadow-orange-100/50 transition-all duration-500 border border-slate-100 overflow-hidden active:scale-[0.98]">
               {notice.image_url && (
-                <div className="relative w-full aspect-video overflow-hidden">
+                <div className="relative w-full aspect-video overflow-hidden bg-slate-900 flex items-center justify-center">
                   <img 
                     src={notice.image_url} 
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                    className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-700" 
                     alt={notice.title} 
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
                 </div>
               )}
 

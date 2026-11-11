@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
-import { LogIn, UserPlus, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle } from 'lucide-react';
+import { LogIn, UserPlus, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle, Eye, EyeOff } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -10,6 +10,7 @@ export const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
   const [view, setView] = useState<'login' | 'forgot'>('login');
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -35,7 +36,7 @@ export const Login: React.FC = () => {
     setError(null);
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/perfil`,
+      redirectTo: `${window.location.origin}/reset-password`,
     });
 
     if (error) {
@@ -177,13 +178,20 @@ export const Login: React.FC = () => {
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-100 rounded-[1.25rem] focus:ring-2 focus:ring-orange-100 focus:border-[#df982a] focus:bg-white transition-all outline-none text-sm font-medium"
+                className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-100 rounded-[1.25rem] focus:ring-2 focus:ring-orange-100 focus:border-[#df982a] focus:bg-white transition-all outline-none text-sm font-medium"
                 placeholder="••••••••"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
@@ -387,3 +395,84 @@ export const Register: React.FC = () => {
   );
 };
 
+
+export const ResetPassword: React.FC = () => {
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
+
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const { error } = await supabase.auth.updateUser({ password });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+    } else {
+      setSuccess(true);
+      setTimeout(() => navigate('/login'), 3000);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 relative overflow-hidden">
+      <div className="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl p-10 space-y-8 relative z-10 border border-white">
+        <div className="text-center space-y-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-50 text-[#df982a]">
+            <Lock className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900">Nova Senha</h2>
+          <p className="text-sm text-slate-500 font-medium">Digite sua nova senha de acesso.</p>
+        </div>
+
+        {success ? (
+          <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-3xl text-center space-y-4">
+            <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto" />
+            <p className="text-emerald-800 text-sm font-bold">Senha redefinida!</p>
+            <p className="text-emerald-600 text-xs">Você será redirecionado para o login em instantes.</p>
+          </div>
+        ) : (
+          <form className="space-y-6" onSubmit={handleReset}>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Nova Senha</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-orange-100 focus:border-[#df982a] outline-none text-sm font-medium"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {error && <p className="text-rose-500 text-xs font-bold text-center">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-5 bg-[#df982a] text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-orange-100 transition-all active:scale-95 disabled:opacity-50"
+            >
+              {loading ? 'Atualizando...' : 'Redefinir Senha'}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};

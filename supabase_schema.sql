@@ -160,12 +160,26 @@ CREATE POLICY "prayers_update_policy" ON public.prayer_requests FOR UPDATE TO au
 -- GATILHOS (Triggers)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
+DECLARE
+  is_first_user BOOLEAN;
 BEGIN
+  -- Verifica se é o primeiro usuário do sistema
+  SELECT NOT EXISTS (SELECT 1 FROM public.profiles) INTO is_first_user;
+
   INSERT INTO public.profiles (id, full_name, role)
-  VALUES (new.id, new.raw_user_meta_data->>'full_name', 'member');
+  VALUES (
+    new.id, 
+    new.raw_user_meta_data->>'full_name', 
+    CASE WHEN is_first_user THEN 'admin' ELSE 'member' END
+  );
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- COMANDO MANUAL PARA TORNAR ADMIN (Caso necessário):
+-- UPDATE public.profiles SET role = 'admin' WHERE id = 'SEU_UUID_AQUI';
+-- Ou pelo e-mail (mais fácil):
+-- UPDATE public.profiles SET role = 'admin' WHERE id IN (SELECT id FROM auth.users WHERE email = 'seu-email@exemplo.com');
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
