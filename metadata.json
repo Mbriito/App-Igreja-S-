@@ -1,0 +1,6 @@
+{
+  "name": "A IGREJA DA VILA - SÉ",
+  "description": "Comunidade, Avisos, Escalas e Pedidos de Oração da @aigrejadavila.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
