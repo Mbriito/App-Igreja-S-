@@ -38,6 +38,7 @@ interface Profile {
   church_position?: string;
   active_ministries?: string;
   children_count?: number;
+  updated_at?: string;
 }
 
 interface AuthContextType {

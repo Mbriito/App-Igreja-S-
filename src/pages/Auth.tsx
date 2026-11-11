@@ -228,6 +228,7 @@ export const Register: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [registered, setRegistered] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -359,13 +360,20 @@ export const Register: React.FC = () => {
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-100 rounded-[1.25rem] focus:ring-2 focus:ring-orange-100 focus:border-[#df982a] transition-all outline-none text-sm font-medium"
+                className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-100 rounded-[1.25rem] focus:ring-2 focus:ring-orange-100 focus:border-[#df982a] transition-all outline-none text-sm font-medium"
                 placeholder="Mínimo 6 caracteres"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 

@@ -92,7 +92,8 @@ export const Profile: React.FC = () => {
     prev_church_phone: '',
     church_position: '',
     active_ministries: '',
-    children_count: 0
+    children_count: 0,
+    prev_church_name_other: ''
   });
 
   useEffect(() => {
@@ -129,7 +130,8 @@ export const Profile: React.FC = () => {
         prev_church_phone: profile.prev_church_phone || '',
         church_position: profile.church_position || '',
         active_ministries: profile.active_ministries || '',
-        children_count: profile.children_count || 0
+        children_count: profile.children_count || 0,
+        prev_church_name_other: ''
       });
     }
   }, [profile]);
@@ -146,16 +148,29 @@ export const Profile: React.FC = () => {
     setLoading(true);
     setMessage(null);
 
+    // Limpar dados antes de enviar (evitar erros de tipo no DB)
+    const { prev_church_name_other, ...dataToSave } = formData;
+    
+    const cleanedData = {
+      ...dataToSave,
+      prev_church_name: formData.prev_church_name === 'Outra' ? formData.prev_church_name_other : formData.prev_church_name,
+      birth_date: formData.birth_date || null,
+      baptism_date: formData.baptism_date || null,
+      marriage_date: formData.marriage_date || null,
+      children_count: parseInt(formData.children_count as any) || 0,
+    };
+
     const { error } = await supabase
       .from('profiles')
       .update({
-        ...formData,
+        ...cleanedData,
         updated_at: new Date().toISOString(),
       })
       .eq('id', user.id);
 
     if (error) {
-      setMessage({ type: 'error', text: 'Erro ao atualizar perfil.' });
+      console.error('Update error:', error);
+      setMessage({ type: 'error', text: `Erro ao atualizar: ${error.message}` });
     } else {
       setMessage({ type: 'success', text: 'Perfil atualizado com sucesso!' });
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -288,15 +303,27 @@ export const Profile: React.FC = () => {
                 </select>
               </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data do Batismo</label>
-              <input
-                type="date"
-                name="baptism_date"
-                value={formData.baptism_date}
-                onChange={handleChange}
-                className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-200 focus:border-[#df982a] outline-none text-sm font-medium"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data Batismo</label>
+                <input
+                  type="date"
+                  name="baptism_date"
+                  value={formData.baptism_date}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-200 focus:border-[#df982a] outline-none text-sm font-medium"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data Casamento</label>
+                <input
+                  type="date"
+                  name="marriage_date"
+                  value={formData.marriage_date}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-200 focus:border-[#df982a] outline-none text-sm font-medium"
+                />
+              </div>
             </div>
           </div>
         </ProfileSection>
@@ -474,6 +501,8 @@ export const Profile: React.FC = () => {
                 {formData.prev_church_name === 'Outra' && (
                   <input
                     name="prev_church_name_other"
+                    value={formData.prev_church_name_other}
+                    onChange={handleChange}
                     placeholder="Nome da Igreja"
                     className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl outline-none text-sm font-medium mt-2"
                   />

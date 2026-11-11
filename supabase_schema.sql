@@ -48,6 +48,19 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Gatilho para atualizar o updated_at automaticamente
+CREATE OR REPLACE FUNCTION public.handle_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER on_profile_updated
+  BEFORE UPDATE ON public.profiles
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
+
 -- 2. Tabela de Avisos e Eventos
 CREATE TABLE IF NOT EXISTS public.notices (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -141,7 +154,7 @@ END $$;
 -- Aplicar novas políticas
 -- PERFIS
 CREATE POLICY "profiles_select_policy" ON public.profiles FOR SELECT TO authenticated USING (auth.uid() = id OR public.check_is_admin());
-CREATE POLICY "profiles_update_policy" ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id);
+CREATE POLICY "profiles_update_policy" ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id OR public.check_is_admin());
 CREATE POLICY "profiles_insert_policy" ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
 
 -- AVISOS

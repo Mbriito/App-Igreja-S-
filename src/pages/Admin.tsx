@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
-import { Megaphone, Calendar, Users, Send, CheckCircle, Image as ImageIcon, X, Edit3 } from 'lucide-react';
+import { Megaphone, Calendar, Users, Send, CheckCircle, Image as ImageIcon, X, Edit3, Shield } from 'lucide-react';
 
 export const Admin: React.FC = () => {
   const { profile } = useAuth();
@@ -117,9 +117,32 @@ export const Admin: React.FC = () => {
 
   if (profile?.role !== 'admin') {
     return (
-      <div className="text-center py-20">
-        <h2 className="text-2xl font-bold text-slate-900">Acesso Restrito</h2>
-        <p className="text-slate-500">Apenas administradores podem acessar esta página.</p>
+      <div className="flex flex-col items-center justify-center py-20 px-6 text-center space-y-8 animate-in fade-in duration-700">
+        <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center text-slate-300">
+          <Shield className="w-10 h-10" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Acesso Restrito</h2>
+          <p className="text-sm text-slate-500 font-medium max-w-xs mx-auto">
+            Este painel é exclusivo para administradores da Igreja da Vila SÉ.
+          </p>
+        </div>
+
+        <div className="w-full max-w-sm bg-amber-50 border border-amber-100 rounded-3xl p-6 text-left space-y-4">
+          <div className="flex items-center gap-2 text-amber-700">
+            <Edit3 className="w-4 h-4" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Como liberar seu acesso:</span>
+          </div>
+          <p className="text-[11px] text-amber-600 leading-relaxed font-medium">
+            Se você é o proprietário do app e deseja liberar estas opções para sua conta, execute este comando no <strong>SQL Editor</strong> do Supabase:
+          </p>
+          <code className="block bg-white p-3 rounded-xl border border-amber-200 text-[10px] text-slate-700 font-mono break-all select-all">
+            UPDATE public.profiles SET role = 'admin' WHERE id = '{profile?.id}';
+          </code>
+          <p className="text-[9px] text-amber-500 italic">
+            * Após rodar o comando, recarregue esta página.
+          </p>
+        </div>
       </div>
     );
   }
@@ -285,8 +308,8 @@ export const Admin: React.FC = () => {
                     <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
                   </label>
                 ) : (
-                  <div className="relative w-full h-48 rounded-2xl overflow-hidden border border-slate-100">
-                    <img src={imagePreview} className="w-full h-full object-cover" alt="Preview" />
+                  <div className="relative w-full h-48 rounded-2xl overflow-hidden border border-slate-100 bg-slate-900 flex items-center justify-center">
+                    <img src={imagePreview} className="max-w-full max-h-full object-contain" alt="Preview" />
                     <button
                       type="button"
                       onClick={() => { setImageFile(null); setImagePreview(null); }}
@@ -296,6 +319,7 @@ export const Admin: React.FC = () => {
                     </button>
                   </div>
                 )}
+                <p className="text-[10px] text-slate-400 font-medium">Tamanho ideal: 1280x720px (Proporção 16:9)</p>
               </div>
 
               <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
