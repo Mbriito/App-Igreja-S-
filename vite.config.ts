@@ -14,29 +14,30 @@ export default defineConfig(() => {
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg'],
         manifest: {
           id: '/',
-          name: 'Igreja Local PWA',
-          short_name: 'IgrejaApp',
-          description: 'Comunidade, Avisos, Escalas e Pedidos de Oração.',
-          theme_color: '#4f46e5',
-          background_color: '#ffffff',
+          name: 'Igreja da Vila Sé',
+          short_name: 'Vila Sé',
+          description: 'Comunidade, Avisos, Escalas e Pedidos de Oração da @aigrejadavila.',
+          theme_color: '#df982a',
+          background_color: '#020617',
           display: 'standalone',
+          orientation: 'portrait',
           start_url: '/',
           scope: '/',
           icons: [
             {
-              src: '/pwa-192x192.png',
+              src: '/assets/aistudio/SE_Logotipo__a4729038.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-512x512.png',
+              src: '/assets/aistudio/SE_Logotipo__a4729038.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/pwa-maskable-512x512.png',
+              src: '/assets/aistudio/SE_Logotipo__a4729038.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable',
@@ -45,6 +46,7 @@ export default defineConfig(() => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+          maximumFileSizeToCacheInBytes: 5000000,
           runtimeCaching: [
             {
               urlPattern: ({ url }) => {

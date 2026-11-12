@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Megaphone, Calendar as CalendarIcon, Clock, ArrowRight, Share2, Sparkles, ChevronRight, Instagram } from 'lucide-react';
-import { PWAInstallButton } from '@/components/PWAInstallButton';
+import { PWAInstallBanner } from '@/components/PWAInstallButton';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -64,7 +64,7 @@ export const Home: React.FC = () => {
   return (
     <div className="space-y-10 animate-in fade-in duration-1000 pb-20">
       <div className="flex flex-col gap-4">
-        <PWAInstallButton />
+        <PWAInstallBanner />
         <div className="flex items-center gap-3 mt-6">
           <div className="h-1.5 w-10 bg-[#df982a] rounded-full shadow-[0_0_15px_#df982a]"></div>
           <span className="text-[10px] font-black text-[#df982a] uppercase tracking-[0.4em]">Novidades da Vila</span>

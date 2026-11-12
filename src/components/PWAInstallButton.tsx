@@ -1,59 +1,161 @@
 import React, { useState } from 'react';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
-import { Download, X } from 'lucide-react';
+import { Download, X, Smartphone, Plus, Share2, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-export const PWAInstallButton: React.FC = () => {
+export const PWAInstallBanner: React.FC = () => {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
 
-  if (isInstalled) return null;
+  // If already installed or manually dismissed, don't show the banner
+  if (isInstalled || isDismissed) return null;
 
+  // Banner visual for Android / Desktop (Installable)
   if (isInstallable) {
     return (
-      <button
-        onClick={install}
-        className="flex items-center gap-2 rounded-full bg-[#df982a] px-4 py-2 text-sm font-medium text-white shadow-lg hover:bg-orange-600 transition active:scale-95"
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-950 rounded-[2.5rem] border border-white/10 p-6 shadow-2xl mb-8"
       >
-        <Download className="w-4 h-4" />
-        Instalar App
-      </button>
+        <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+          <Sparkles className="w-24 h-24 text-[#df982a]" />
+        </div>
+
+        <button 
+          onClick={() => setIsDismissed(true)}
+          className="absolute top-4 right-4 p-2 bg-white/5 rounded-full text-slate-500 hover:text-white transition-all"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        <div className="flex flex-col sm:flex-row items-center gap-6 relative z-10">
+          <div className="w-16 h-16 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20 shadow-2xl">
+            <Smartphone className="w-8 h-8 text-[#df982a]" />
+          </div>
+          
+          <div className="flex-1 text-center sm:text-left space-y-1">
+            <h3 className="text-xl font-black text-white uppercase tracking-tight leading-none">Instalar Aplicativo</h3>
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Acesse a Vila Sé com um toque</p>
+          </div>
+
+          <button
+            onClick={install}
+            className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-[#df982a] text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] shadow-[0_15px_30px_rgba(223,152,42,0.3)] hover:bg-orange-600 transition-all active:scale-95 border-b-4 border-orange-700/50"
+          >
+            <Download className="w-4 h-4" />
+            Instalar Agora
+          </button>
+        </div>
+      </motion.div>
     );
   }
 
+  // iOS Safari Flow
   if (isIOS) {
     return (
       <>
-        <button
-          onClick={() => setShowIOSGuide(true)}
-          className="flex items-center gap-2 rounded-full border border-orange-200 bg-white px-4 py-2 text-sm font-medium text-[#df982a] hover:bg-orange-50 transition"
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-950 rounded-[2.5rem] border border-white/10 p-6 shadow-2xl mb-8"
         >
-          <Download className="w-4 h-4" />
-          Instalar no iOS
-        </button>
-
-        {showIOSGuide && (
-          <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center bg-black/60 p-4 animate-in fade-in duration-200">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl animate-in slide-in-from-bottom-8 duration-300">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-900">Instalar no iPhone</h3>
-                <button onClick={() => setShowIOSGuide(false)} className="text-gray-400 hover:text-gray-600">
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-              <p className="text-gray-600 space-y-4">
-                1. Toque no botão de <strong>Compartilhar</strong> <span className="inline-block bg-gray-100 p-1 rounded">⎋</span> na barra do Safari.<br /><br />
-                2. Role para baixo e toque em <strong>Adicionar à Tela de Início</strong>.<br /><br />
-                3. Toque em <strong>Adicionar</strong> no canto superior direito.
-              </p>
-              <button
-                onClick={() => setShowIOSGuide(false)}
-                className="mt-6 w-full rounded-xl bg-[#df982a] py-3 text-sm font-bold text-white hover:bg-orange-600"
-              >
-                Entendi
-              </button>
-            </div>
+          <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+            <Smartphone className="w-24 h-24 text-[#df982a]" />
           </div>
-        )}
+
+          <button 
+            onClick={() => setIsDismissed(true)}
+            className="absolute top-4 right-4 p-2 bg-white/5 rounded-full text-slate-500 hover:text-white transition-all"
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          <div className="flex flex-col sm:flex-row items-center gap-6 relative z-10">
+            <div className="w-16 h-16 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20 shadow-2xl">
+              <Smartphone className="w-8 h-8 text-[#df982a]" />
+            </div>
+            
+            <div className="flex-1 text-center sm:text-left space-y-1">
+              <h3 className="text-xl font-black text-white uppercase tracking-tight leading-none">Vila Sé no seu iPhone</h3>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Transforme este site em app</p>
+            </div>
+
+            <button
+              onClick={() => setShowIOSGuide(true)}
+              className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-[#df982a] text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] shadow-[0_15px_30px_rgba(223,152,42,0.3)] hover:bg-orange-600 transition-all active:scale-95 border-b-4 border-orange-700/50"
+            >
+              <Plus className="w-4 h-4" />
+              Como Instalar
+            </button>
+          </div>
+        </motion.div>
+
+        <AnimatePresence>
+          {showIOSGuide && (
+            <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center p-4 bg-slate-950/80 backdrop-blur-xl">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 30 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 30 }}
+                className="relative w-full max-w-md bg-slate-900 rounded-[3rem] border border-white/10 p-10 shadow-[0_30px_100px_rgba(0,0,0,0.8)]"
+              >
+                <div className="flex justify-between items-center mb-10">
+                  <div className="space-y-1">
+                    <h3 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">Instalar no iOS</h3>
+                    <p className="text-[10px] text-[#df982a] font-black uppercase tracking-[0.3em]">Siga os passos abaixo</p>
+                  </div>
+                  <button 
+                    onClick={() => setShowIOSGuide(false)} 
+                    className="w-12 h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-slate-500 hover:text-white transition-all"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <div className="space-y-8 mb-10">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-[#df982a] border border-white/10 flex-shrink-0">
+                      <Share2 className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-black text-white uppercase">Passo 1</p>
+                      <p className="text-xs text-slate-400 font-medium">Toque no botão de <strong>Compartilhar</strong> na barra inferior do Safari.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-[#df982a] border border-white/10 flex-shrink-0">
+                      <Plus className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-black text-white uppercase">Passo 2</p>
+                      <p className="text-xs text-slate-400 font-medium">Role para baixo e selecione <strong>Adicionar à Tela de Início</strong>.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-[#df982a] border border-white/10 flex-shrink-0">
+                      <Smartphone className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-black text-white uppercase">Passo 3</p>
+                      <p className="text-xs text-slate-400 font-medium">Toque em <strong>Adicionar</strong> no canto superior direito e pronto!</p>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowIOSGuide(false)}
+                  className="w-full py-5 bg-white/5 text-white font-black uppercase tracking-[0.2em] rounded-2xl border border-white/10 hover:bg-white/10 transition-all active:scale-95"
+                >
+                  Entendi, vou instalar
+                </button>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </>
     );
   }

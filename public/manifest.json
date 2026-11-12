@@ -1,0 +1,32 @@
+{
+  "id": "/",
+  "name": "Igreja da Vila Sé",
+  "short_name": "Vila Sé",
+  "description": "Comunidade, Avisos, Escalas e Pedidos de Oração da @aigrejadavila.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#df982a",
+  "orientation": "portrait",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/assets/aistudio/SE_Logotipo__a4729038.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/aistudio/SE_Logotipo__a4729038.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/aistudio/SE_Logotipo__a4729038.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
