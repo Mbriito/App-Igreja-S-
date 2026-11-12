@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, User, ChevronLeft, ChevronRight, MapPin, Search, Sparkles } from 'lucide-react';
+import { Calendar as CalendarIcon, User, ChevronLeft, ChevronRight, MapPin, Search, Sparkles, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import { clsx } from 'clsx';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Schedule {
   id: string;
@@ -39,33 +40,36 @@ export const Schedules: React.FC = () => {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <div className="h-1 w-8 bg-[#df982a] rounded-full"></div>
-          <span className="text-[10px] font-black text-[#df982a] uppercase tracking-[0.3em]">Agenda</span>
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000 pb-10">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <div className="h-1.5 w-10 bg-[#df982a] rounded-full shadow-[0_0_15px_#df982a]"></div>
+          <span className="text-[10px] font-black text-[#df982a] uppercase tracking-[0.4em]">Agenda</span>
         </div>
         <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Escalas de Serviço</h2>
-          <div className="flex items-center bg-white rounded-full p-1 border border-slate-100 shadow-sm">
+          <div className="space-y-1">
+            <h2 className="text-4xl font-black text-white tracking-tighter leading-none uppercase">Escalas</h2>
+            <p className="text-sm text-slate-500 font-bold uppercase tracking-widest mt-1">Servindo com amor na Vila</p>
+          </div>
+          <div className="flex items-center bg-slate-900 rounded-3xl p-1.5 border border-white/5 shadow-2xl">
             <button 
               onClick={() => setSelectedDate(addDays(selectedDate, -7))}
-              className="p-1.5 hover:bg-slate-50 rounded-full transition active:scale-90"
+              className="p-3 hover:bg-white/5 rounded-[1.25rem] transition-all active:scale-90 text-slate-400 hover:text-white"
             >
-              <ChevronLeft className="w-4 h-4 text-slate-600" />
+              <ChevronLeft className="w-6 h-6" />
             </button>
             <button 
               onClick={() => setSelectedDate(addDays(selectedDate, 7))}
-              className="p-1.5 hover:bg-slate-50 rounded-full transition active:scale-90"
+              className="p-3 hover:bg-white/5 rounded-[1.25rem] transition-all active:scale-90 text-slate-400 hover:text-white"
             >
-              <ChevronRight className="w-4 h-4 text-slate-600" />
+              <ChevronRight className="w-6 h-6" />
             </button>
           </div>
         </div>
       </div>
 
       {/* Week Selector */}
-      <div className="bg-white/80 backdrop-blur-md p-3 rounded-[2rem] shadow-sm border border-slate-100 flex justify-between overflow-x-auto no-scrollbar">
+      <div className="bg-slate-900/40 backdrop-blur-xl p-4 rounded-[3rem] shadow-2xl border border-white/5 flex justify-between overflow-x-auto no-scrollbar gap-2">
         {weekDays.map((day) => {
           const isSelected = isSameDay(day, selectedDate);
           return (
@@ -73,93 +77,115 @@ export const Schedules: React.FC = () => {
               key={day.toString()}
               onClick={() => setSelectedDate(day)}
               className={clsx(
-                "flex flex-col items-center min-w-[50px] py-4 rounded-[1.5rem] transition-all duration-300",
+                "flex flex-col items-center min-w-[58px] py-6 rounded-[1.8rem] transition-all duration-500",
                 isSelected 
-                  ? "bg-[#df982a] text-white shadow-xl shadow-orange-100 scale-105" 
-                  : "text-slate-400 hover:bg-slate-50 active:scale-95"
+                  ? "bg-[#df982a] text-slate-950 shadow-[0_15px_30px_rgba(223,152,42,0.3)] scale-105" 
+                  : "text-slate-500 hover:bg-white/5 hover:text-slate-300 active:scale-95"
               )}
             >
               <span className={clsx(
-                "text-[9px] uppercase font-black tracking-widest mb-1",
-                isSelected ? "text-orange-100" : "text-slate-300"
+                "text-[10px] uppercase font-black tracking-widest mb-1.5",
+                isSelected ? "text-slate-950/60" : "text-slate-700"
               )}>
                 {format(day, 'eee', { locale: ptBR })}
               </span>
-              <span className="text-lg font-black">{format(day, 'd')}</span>
+              <span className="text-2xl font-black">{format(day, 'd')}</span>
             </button>
           );
         })}
       </div>
 
       {/* Daily List */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between px-2">
-          <div className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest">
-            <CalendarIcon className="w-3.5 h-3.5 text-[#df982a]" />
-            <span>{format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}</span>
+      <div className="space-y-8">
+        <div className="flex items-center justify-between px-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-slate-900 rounded-2xl flex items-center justify-center border border-white/5 shadow-lg">
+              <CalendarIcon className="w-5 h-5 text-[#df982a]" />
+            </div>
+            <span className="text-sm font-black text-white uppercase tracking-widest">{format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}</span>
           </div>
-          <button className="text-[10px] font-black text-[#df982a] uppercase tracking-widest hover:underline">
-            Ver Mês Inteiro
+          <button className="text-[10px] font-black text-[#df982a] uppercase tracking-widest hover:underline opacity-60 hover:opacity-100 transition-opacity">
+            Mês Inteiro
           </button>
         </div>
 
         {loading ? (
-          <div className="grid gap-4">
+          <div className="grid gap-6">
             {[1, 2].map(i => (
-              <div key={i} className="h-28 bg-white border border-slate-100 rounded-[2rem] animate-pulse" />
+              <div key={i} className="h-32 bg-slate-900/50 border border-white/5 rounded-[2.5rem] animate-pulse" />
             ))}
           </div>
         ) : filteredSchedules.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 bg-white border-2 border-dashed border-slate-100 rounded-[2.5rem]">
-            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-              <Search className="w-6 h-6 text-slate-200" />
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex flex-col items-center justify-center py-20 bg-slate-900/30 border-2 border-dashed border-white/5 rounded-[3rem] shadow-2xl"
+          >
+            <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 shadow-inner">
+              <Search className="w-8 h-8 text-slate-800" />
             </div>
-            <p className="text-slate-400 font-bold text-sm">Nenhuma escala para este dia</p>
-            <p className="text-slate-300 text-xs">Selecione outra data acima.</p>
-          </div>
+            <p className="text-slate-500 font-black uppercase tracking-widest text-sm">Nenhuma escala hoje</p>
+            <p className="text-slate-700 text-[10px] font-black uppercase tracking-[0.2em] mt-2">Tente outra data acima</p>
+          </motion.div>
         ) : (
-          <div className="grid gap-4">
-            {filteredSchedules.map((schedule) => (
-              <div key={schedule.id} className="group bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 flex items-center gap-4 active:scale-[0.98]">
-                <div className="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center text-[#df982a] group-hover:scale-110 transition-transform duration-500 shadow-inner">
-                  <User className="w-7 h-7" />
-                </div>
-                <div className="flex-1 space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase text-[#df982a] tracking-widest">{schedule.ministry_name}</span>
-                    <div className="h-1 w-1 bg-slate-200 rounded-full" />
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter flex items-center gap-1">
-                      <MapPin className="w-2.5 h-2.5" /> Templo SÉ
-                    </span>
+          <div className="grid gap-6">
+            <AnimatePresence>
+              {filteredSchedules.map((schedule, index) => (
+                <motion.div 
+                  key={schedule.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="group bg-slate-900/40 backdrop-blur-xl p-6 rounded-[2.5rem] border border-white/5 shadow-2xl hover:shadow-orange-500/10 transition-all duration-500 flex items-center gap-6 active:scale-[0.98]"
+                >
+                  <div className="w-16 h-16 rounded-[1.5rem] bg-slate-950 border border-white/5 flex items-center justify-center text-[#df982a] group-hover:scale-110 transition-transform duration-500 shadow-2xl group-hover:border-[#df982a]/30">
+                    <User className="w-8 h-8" />
                   </div>
-                  <p className="text-xl font-black text-slate-900 leading-none">{schedule.member_name}</p>
-                  {schedule.description && (
-                    <p className="text-xs text-slate-500 font-medium line-clamp-1">{schedule.description}</p>
-                  )}
-                </div>
-                <button className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 hover:text-[#df982a] transition-colors">
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
-            ))}
+                  <div className="flex-1 space-y-1.5 min-w-0">
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      <span className="text-[10px] font-black uppercase text-[#df982a] tracking-[0.2em] whitespace-nowrap">{schedule.ministry_name}</span>
+                      <div className="w-1.5 h-1.5 bg-slate-800 rounded-full flex-shrink-0" />
+                      <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest flex items-center gap-1.5 truncate">
+                        <MapPin className="w-3 h-3 text-[#df982a]" /> SÉ
+                      </span>
+                    </div>
+                    <p className="text-2xl font-black text-white leading-none uppercase tracking-tighter truncate">{schedule.member_name}</p>
+                    {schedule.description && (
+                      <p className="text-xs text-slate-500 font-bold uppercase tracking-wide truncate">{schedule.description}</p>
+                    )}
+                  </div>
+                  <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center text-slate-700 group-hover:text-white transition-all border border-white/5">
+                    <ChevronRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </div>
 
-      <div className="p-6 bg-slate-900 rounded-[2.5rem] text-white space-y-4 shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-orange-300" />
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="p-8 bg-gradient-to-br from-slate-900 to-slate-950 rounded-[3rem] text-white space-y-6 shadow-2xl border border-white/5 relative overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+          <Sparkles className="w-24 h-24 text-[#df982a]" />
+        </div>
+        <div className="flex items-center gap-4 relative z-10">
+          <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
+            <Sparkles className="w-6 h-6 text-[#df982a]" />
           </div>
-          <div>
-            <h4 className="font-black tracking-tight leading-none uppercase text-sm">Aviso de Serviço</h4>
-            <p className="text-[10px] font-medium text-slate-400">@AIGREJADAVILA</p>
+          <div className="space-y-1">
+            <h4 className="font-black tracking-[0.2em] leading-none uppercase text-xs text-[#df982a]">Aviso de Serviço</h4>
+            <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Compromisso com a Vila</p>
           </div>
         </div>
-        <p className="text-sm text-slate-300 font-medium">
-          Caso não possa comparecer no dia escalado, favor avisar sua liderança com antecedência mínima de 48 horas.
+        <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.1em] leading-relaxed relative z-10">
+          Caso não possa comparecer no dia escalado, favor avisar sua liderança com antecedência mínima de <span className="text-white">48 horas</span>.
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 };

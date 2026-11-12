@@ -3,8 +3,9 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Heart, Plus, Send, Shield, Globe, MessageSquare, Sparkles, X, User } from 'lucide-react';
+import { Heart, Plus, Send, Shield, Globe, MessageSquare, Sparkles, X, User, ChevronRight } from 'lucide-react';
 import { clsx } from 'clsx';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface PrayerRequest {
   id: string;
@@ -83,172 +84,188 @@ export const Prayers: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <div className="h-1 w-8 bg-[#df982a] rounded-full"></div>
-          <span className="text-[10px] font-black text-[#df982a] uppercase tracking-[0.3em]">Intercessão</span>
+    <div className="space-y-10 animate-in fade-in duration-1000">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <div className="h-1.5 w-10 bg-[#df982a] rounded-full shadow-[0_0_15px_#df982a]"></div>
+          <span className="text-[10px] font-black text-[#df982a] uppercase tracking-[0.4em]">Intercessão</span>
         </div>
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Coração da Vila</h2>
-            <p className="text-sm text-slate-500 font-medium mt-1">Carregai as cargas uns dos outros.</p>
+          <div className="space-y-1">
+            <h2 className="text-4xl font-black text-white tracking-tighter leading-none uppercase">Orações</h2>
+            <p className="text-sm text-slate-500 font-bold uppercase tracking-widest mt-1">Carregai as cargas uns dos outros</p>
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="w-14 h-14 bg-[#df982a] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-orange-200 active:scale-95 transition-all hover:bg-orange-600"
+            className="w-14 h-14 bg-[#df982a] text-slate-950 rounded-2xl flex items-center justify-center shadow-[0_15px_40px_rgba(223,152,42,0.3)] active:scale-90 transition-all hover:bg-orange-600 group"
           >
-            <Plus className="w-8 h-8" />
+            <Plus className="w-8 h-8 group-hover:rotate-90 transition-transform" />
           </button>
         </div>
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid gap-8">
         {loading ? (
-          <div className="grid gap-4">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-40 bg-white border border-slate-100 rounded-[2.5rem] animate-pulse" />
+          <div className="grid gap-6">
+            {[1, 2].map(i => (
+              <div key={i} className="h-48 bg-slate-900/50 border border-white/5 rounded-[3rem] animate-pulse" />
             ))}
           </div>
         ) : prayers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-white border border-slate-100 rounded-[2.5rem] shadow-sm">
-            <div className="w-20 h-20 bg-orange-50 rounded-full flex items-center justify-center mb-6">
-              <Heart className="w-8 h-8 text-[#df982a]" />
+          <div className="flex flex-col items-center justify-center py-24 bg-slate-900/40 border-2 border-dashed border-white/5 rounded-[3rem] shadow-2xl">
+            <div className="w-24 h-24 bg-orange-500/10 rounded-full flex items-center justify-center mb-8 border border-orange-500/20">
+              <Heart className="w-10 h-10 text-[#df982a]" />
             </div>
-            <h3 className="text-lg font-bold text-slate-400">Nenhum pedido aberto</h3>
-            <p className="text-sm text-slate-300">Seja o primeiro a compartilhar.</p>
+            <h3 className="text-xl font-black text-slate-400 uppercase tracking-tight">Nenhum pedido aberto</h3>
+            <p className="text-sm text-slate-500 font-bold uppercase tracking-widest mt-2">Seja o primeiro a compartilhar</p>
           </div>
         ) : (
-          prayers.map((prayer) => (
-            <div key={prayer.id} className="group relative bg-white p-7 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-500 active:scale-[0.99] overflow-hidden">
-              {prayer.is_private && (
-                <div className="absolute top-0 right-0 px-4 py-1.5 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest rounded-bl-2xl flex items-center gap-1.5">
-                  <Shield className="w-3 h-3 text-orange-400" /> Confidencial
-                </div>
-              )}
-              
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100 shadow-inner">
-                  <User className="w-6 h-6" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="text-sm font-black text-slate-900 leading-none">{prayer.profiles?.full_name}</h4>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <span className="text-[9px] font-black text-[#df982a] uppercase tracking-tighter bg-orange-50 px-2 py-0.5 rounded-full">
-                      {prayer.profiles?.church_position || 'Membro'}
-                    </span>
-                    <div className="h-1 w-1 bg-slate-200 rounded-full" />
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
-                      {format(new Date(prayer.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
-                    </span>
+          <AnimatePresence>
+            {prayers.map((prayer, index) => (
+              <motion.div 
+                key={prayer.id} 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="group relative bg-slate-900/40 backdrop-blur-xl p-8 rounded-[3rem] border border-white/5 shadow-2xl hover:shadow-orange-500/10 transition-all duration-500 active:scale-[0.99] overflow-hidden"
+              >
+                {prayer.is_private && (
+                  <div className="absolute top-0 right-0 px-6 py-2.5 bg-slate-950 text-orange-400 text-[10px] font-black uppercase tracking-[0.2em] rounded-bl-[2rem] border-l border-b border-white/5 flex items-center gap-2">
+                    <Shield className="w-4 h-4" /> Confidencial
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-16 h-16 rounded-[1.5rem] bg-slate-950 border border-white/10 flex items-center justify-center text-[#df982a] font-black text-xl uppercase shadow-inner">
+                    {prayer.profiles?.full_name?.charAt(0) || 'U'}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-base font-black text-white uppercase tracking-tight leading-none">{prayer.profiles?.full_name}</h4>
+                    <div className="flex items-center gap-2.5 mt-2">
+                      <span className="text-[9px] font-black text-[#df982a] uppercase tracking-widest bg-orange-500/10 border border-orange-500/20 px-3 py-1 rounded-full">
+                        {prayer.profiles?.church_position || 'Membro'}
+                      </span>
+                      <div className="w-1.5 h-1.5 bg-slate-800 rounded-full" />
+                      <span className="text-[10px] text-slate-600 font-black uppercase tracking-tighter">
+                        {format(new Date(prayer.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="space-y-2 mb-6">
-                <h3 className="text-xl font-black text-slate-900 leading-tight group-hover:text-[#df982a] transition-colors">{prayer.title}</h3>
-                <p className="text-slate-500 text-sm leading-relaxed font-medium line-clamp-4">{prayer.description}</p>
-              </div>
-
-              <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                <button
-                  onClick={() => handlePraying(prayer.id, prayer.praying_count)}
-                  className={clsx(
-                    "flex items-center gap-2.5 px-5 py-2.5 rounded-2xl transition-all active:scale-95 text-xs font-black uppercase tracking-widest",
-                    prayer.praying_count > 0 
-                      ? "bg-orange-50 text-[#df982a] shadow-sm" 
-                      : "bg-slate-50 text-slate-400 hover:bg-orange-50 hover:text-[#df982a]"
-                  )}
-                >
-                  <Heart className={clsx("w-4 h-4 transition-transform duration-500", prayer.praying_count > 0 ? "fill-[#df982a] scale-110" : "")} />
-                  Estou orando {prayer.praying_count > 0 && <span className="bg-white px-2 py-0.5 rounded-full shadow-sm ml-1">{prayer.praying_count}</span>}
-                </button>
-                <div className="flex items-center gap-2">
-                   <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300">
-                     <MessageSquare className="w-4 h-4" />
-                   </div>
+                <div className="space-y-4 mb-8">
+                  <h3 className="text-2xl font-black text-white leading-tight group-hover:text-[#df982a] transition-colors uppercase tracking-tight">{prayer.title}</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed font-medium line-clamp-5">{prayer.description}</p>
                 </div>
-              </div>
-            </div>
-          ))
+
+                <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                  <button
+                    onClick={() => handlePraying(prayer.id, prayer.praying_count)}
+                    className={clsx(
+                      "flex items-center gap-3 px-8 py-4 rounded-2xl transition-all active:scale-95 text-[10px] font-black uppercase tracking-[0.2em] border",
+                      prayer.praying_count > 0 
+                        ? "bg-[#df982a] text-slate-950 border-transparent shadow-xl shadow-orange-500/20" 
+                        : "bg-white/5 text-slate-500 border-white/5 hover:bg-orange-500/10 hover:text-[#df982a] hover:border-orange-500/20"
+                    )}
+                  >
+                    <Heart className={clsx("w-4 h-4 transition-transform duration-700", prayer.praying_count > 0 ? "fill-slate-950 scale-110" : "")} />
+                    Estou orando {prayer.praying_count > 0 && <span className="bg-slate-950/20 px-2 py-0.5 rounded-full ml-1">{prayer.praying_count}</span>}
+                  </button>
+                  
+                  <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center text-slate-600 group-hover:text-[#df982a] transition-colors border border-white/5">
+                    <MessageSquare className="w-5 h-5" />
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         )}
       </div>
 
       {/* Modal de Pedido */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center p-4 animate-in fade-in duration-200">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-          <div className="relative w-full max-w-md bg-white rounded-[2.5rem] p-8 shadow-2xl animate-in slide-in-from-bottom-12 duration-500">
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight leading-none">Novo Pedido</h3>
-                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-2">Compartilhe sua carga</p>
-              </div>
-              <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:text-rose-500 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateRequest} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Título do Pedido</label>
-                <input
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-200 focus:border-[#df982a] outline-none text-sm font-black tracking-tight"
-                  placeholder="Ex: Saúde da minha família"
-                />
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center p-4 bg-slate-950/80 backdrop-blur-xl">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 30 }}
+              className="relative w-full max-w-md bg-slate-900 rounded-[3rem] border border-white/10 p-10 shadow-[0_30px_100px_rgba(0,0,0,0.8)]"
+            >
+              <div className="flex justify-between items-center mb-10">
+                <div className="space-y-1">
+                  <h3 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">Novo Pedido</h3>
+                  <p className="text-[10px] text-[#df982a] font-black uppercase tracking-[0.3em]">Compartilhe sua carga</p>
+                </div>
+                <button 
+                  onClick={() => setIsModalOpen(false)} 
+                  className="w-12 h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-slate-500 hover:text-rose-500 transition-all"
+                >
+                  <X className="w-6 h-6" />
+                </button>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Sua Oração</label>
-                <textarea
-                  required
-                  rows={4}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-200 focus:border-[#df982a] outline-none resize-none text-sm font-medium"
-                  placeholder="Conte-nos o motivo do seu pedido..."
-                />
-              </div>
-
-              <div className="flex items-center gap-4 p-5 bg-slate-900 rounded-[2rem] border border-slate-800 shadow-xl">
-                <div className="relative">
+              <form onSubmit={handleCreateRequest} className="space-y-8">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Título do Pedido</label>
                   <input
-                    type="checkbox"
-                    id="is_private"
-                    checked={isPrivate}
-                    onChange={(e) => setIsPrivate(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <label 
-                    htmlFor="is_private" 
-                    className="block w-12 h-6 bg-slate-700 rounded-full peer-checked:bg-[#df982a] transition-colors cursor-pointer after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-6"
+                    required
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-[1.5rem] focus:ring-2 focus:ring-orange-500/10 focus:border-[#df982a] focus:bg-white/10 outline-none text-sm font-bold text-white placeholder-slate-700 transition-all"
+                    placeholder="Ex: Saúde da minha família"
                   />
                 </div>
-                <div className="flex-1">
-                  <label htmlFor="is_private" className="block text-xs font-black text-white uppercase tracking-widest cursor-pointer">Confidencial</label>
-                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">Apenas para a liderança</p>
-                </div>
-                <Shield className={clsx("w-5 h-5 transition-colors", isPrivate ? "text-[#df982a]" : "text-slate-600")} />
-              </div>
 
-              <button
-                type="submit"
-                disabled={sending}
-                className="w-full py-5 bg-[#df982a] text-white font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-orange-100 hover:bg-orange-600 disabled:opacity-50 flex items-center justify-center gap-3 active:scale-95 transition-all"
-              >
-                {sending ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <><Send className="w-5 h-5" /> Enviar Oração</>
-                )}
-              </button>
-            </form>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Sua Oração</label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full px-6 py-5 bg-white/5 border border-white/10 rounded-[1.5rem] focus:ring-2 focus:ring-orange-500/10 focus:border-[#df982a] focus:bg-white/10 outline-none resize-none text-sm font-medium text-white placeholder-slate-700 transition-all"
+                    placeholder="Conte-nos o motivo do seu pedido..."
+                  />
+                </div>
+
+                <div className="flex items-center gap-5 p-6 bg-slate-950 rounded-[2.5rem] border border-white/5 shadow-2xl group transition-all hover:border-[#df982a]/30">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      id="is_private"
+                      checked={isPrivate}
+                      onChange={(e) => setIsPrivate(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <label 
+                      htmlFor="is_private" 
+                      className="block w-14 h-7 bg-white/5 rounded-full peer-checked:bg-[#df982a] transition-all cursor-pointer after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-7 shadow-inner"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label htmlFor="is_private" className="block text-xs font-black text-white uppercase tracking-[0.2em] cursor-pointer">Confidencial</label>
+                    <p className="text-[9px] text-slate-600 font-bold uppercase tracking-widest mt-0.5">Apenas para a liderança</p>
+                  </div>
+                  <Shield className={clsx("w-6 h-6 transition-all duration-500", isPrivate ? "text-[#df982a] scale-110" : "text-slate-800")} />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={sending}
+                  className="w-full py-5 bg-[#df982a] text-slate-950 font-black uppercase tracking-[0.25em] rounded-2xl shadow-2xl shadow-orange-500/20 hover:bg-orange-600 disabled:opacity-50 flex items-center justify-center gap-3 active:scale-95 transition-all border-b-4 border-orange-700/50"
+                >
+                  {sending ? (
+                    <div className="w-6 h-6 border-4 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <><Send className="w-6 h-6" /> Enviar Oração</>
+                  )}
+                </button>
+              </form>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 };

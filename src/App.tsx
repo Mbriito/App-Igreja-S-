@@ -14,14 +14,14 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#020617]">
         <div className="relative">
-          <div className="w-16 h-16 border-4 border-orange-100 rounded-full" />
-          <div className="absolute top-0 left-0 w-16 h-16 border-4 border-[#df982a] border-t-transparent rounded-full animate-spin" />
+          <div className="w-16 h-16 border-4 border-white/5 rounded-full" />
+          <div className="absolute top-0 left-0 w-16 h-16 border-4 border-[#df982a] border-t-transparent rounded-full animate-spin shadow-[0_0_20px_rgba(223,152,42,0.3)]" />
         </div>
-        <div className="mt-8 flex flex-col items-center gap-1">
+        <div className="mt-8 flex flex-col items-center gap-2">
           <span className="text-[10px] font-black text-[#df982a] uppercase tracking-[0.4em] animate-pulse">A IGREJA DA VILA</span>
-          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">SÉ</span>
+          <span className="text-xs font-black text-white/50 uppercase tracking-[0.2em]">SÉ</span>
         </div>
       </div>
     );
