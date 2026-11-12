@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
-import { Megaphone, Calendar, Users, Send, CheckCircle, Image as ImageIcon, X, Edit3, Shield, Search, Sparkles } from 'lucide-react';
+import { Megaphone, Calendar, Users, Send, CheckCircle, Image as ImageIcon, X, Edit3, Shield, Search, Sparkles, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 
@@ -14,6 +14,8 @@ export const Admin: React.FC = () => {
   const [members, setMembers] = useState<any[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
 
   const fetchMembers = async () => {
     setLoadingMembers(true);
@@ -44,6 +46,7 @@ export const Admin: React.FC = () => {
   React.useEffect(() => {
     if (tab === 'members') {
       fetchMembers();
+      setCurrentPage(1);
     } else if (tab === 'notices') {
       fetchNotices();
     }
@@ -210,6 +213,36 @@ export const Admin: React.FC = () => {
   const showSuccess = () => {
     setSuccess(true);
     setTimeout(() => setSuccess(false), 3000);
+  };
+
+  const handleExportCSV = () => {
+    const filteredMembers = members.filter(m => 
+      m.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const headers = ["Nome", "E-mail", "Cargo", "Nivel de Acesso", "Telefone"];
+    const rows = filteredMembers.map(m => [
+      m.full_name || '',
+      m.email || '', // Note: if email is not in profile, we might need to fetch it or skip
+      m.church_position || 'Membro',
+      m.role || 'member',
+      m.phone || ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(r => r.map(val => `"${val.replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `membros_vila_se_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const tabs = [
@@ -489,15 +522,27 @@ export const Admin: React.FC = () => {
                 Membros
               </h3>
               
-              <div className="relative group">
-                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-[#df982a] transition-colors" />
-                <input
-                  type="text"
-                  placeholder="Pesquisar membro pelo nome..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-14 pr-6 py-5 bg-white/5 border border-white/10 rounded-[1.5rem] focus:ring-2 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white placeholder-slate-600 transition-all"
-                />
+              <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                <div className="relative group flex-1 w-full">
+                  <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-[#df982a] transition-colors" />
+                  <input
+                    type="text"
+                    placeholder="Pesquisar membro pelo nome..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full pl-14 pr-6 py-5 bg-white/5 border border-white/10 rounded-[1.5rem] focus:ring-2 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white placeholder-slate-600 transition-all"
+                  />
+                </div>
+                <button
+                  onClick={handleExportCSV}
+                  className="w-full sm:w-auto px-6 py-5 bg-slate-900 border border-amber-500/30 hover:border-amber-500/60 rounded-2xl flex items-center justify-center gap-3 text-slate-100 text-xs font-black uppercase tracking-widest transition-all group"
+                >
+                  <Download className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
+                  Baixar Lista (CSV)
+                </button>
               </div>
 
               {loadingMembers ? (
@@ -505,47 +550,87 @@ export const Admin: React.FC = () => {
                   <div className="w-10 h-10 border-4 border-[#df982a] border-t-transparent rounded-full animate-spin shadow-lg" />
                 </div>
               ) : (
-                <div className="divide-y divide-white/5">
-                  {members
-                    .filter(m => m.full_name?.toLowerCase().includes(searchTerm.toLowerCase()))
-                    .map(member => (
-                      <div key={member.id} className="py-6 flex items-center justify-between gap-6 group hover:bg-white/5 px-4 -mx-4 rounded-2xl transition-all">
-                        <button 
-                          onClick={() => setSelectedMember(member)}
-                          className="flex items-center gap-4 min-w-0 text-left hover:opacity-80 transition-opacity flex-1"
-                        >
-                          <div className="w-14 h-14 rounded-2xl bg-slate-950 border border-white/10 flex items-center justify-center text-[#df982a] font-black text-xl uppercase flex-shrink-0 shadow-lg">
-                            {member.full_name?.charAt(0) || 'U'}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-black text-white truncate uppercase tracking-tight">{member.full_name}</p>
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">
-                              {member.church_position || 'Membro'}
-                            </p>
-                          </div>
-                        </button>
-                        
-                        <div className="flex items-center gap-3">
-                          {member.id !== profile?.id && (
-                            <button
-                              onClick={() => toggleAdmin(member.id, member.role)}
-                              className={`px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
-                                member.role === 'admin' 
-                                  ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20' 
-                                  : 'bg-orange-500/10 text-[#df982a] border border-orange-500/20 hover:bg-orange-500/20'
-                              }`}
-                            >
-                              {member.role === 'admin' ? 'Remover Admin' : 'Tornar Admin'}
-                            </button>
+                <div className="space-y-6">
+                  <div className="divide-y divide-white/5">
+                    {(() => {
+                      const filtered = members.filter(m => 
+                        m.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+                      );
+                      const totalPages = Math.ceil(filtered.length / itemsPerPage);
+                      const displayed = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+                      if (displayed.length === 0) {
+                        return <p className="text-center text-slate-600 text-xs py-10 uppercase font-black tracking-widest">Nenhum membro encontrado.</p>;
+                      }
+
+                      return (
+                        <>
+                          {displayed.map(member => (
+                            <div key={member.id} className="py-6 flex items-center justify-between gap-6 group hover:bg-white/5 px-4 -mx-4 rounded-2xl transition-all">
+                              <button 
+                                onClick={() => setSelectedMember(member)}
+                                className="flex items-center gap-4 min-w-0 text-left hover:opacity-80 transition-opacity flex-1"
+                              >
+                                <div className="w-14 h-14 rounded-2xl bg-slate-950 border border-white/10 flex items-center justify-center text-[#df982a] font-black text-xl uppercase flex-shrink-0 shadow-lg">
+                                  {member.full_name?.charAt(0) || 'U'}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-black text-white truncate uppercase tracking-tight">{member.full_name}</p>
+                                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">
+                                    {member.church_position || 'Membro'}
+                                  </p>
+                                </div>
+                              </button>
+                              
+                              <div className="flex items-center gap-3">
+                                {member.id !== profile?.id && (
+                                  <button
+                                    onClick={() => toggleAdmin(member.id, member.role)}
+                                    className={`px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                                      member.role === 'admin' 
+                                        ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20' 
+                                        : 'bg-orange-500/10 text-[#df982a] border border-orange-500/20 hover:bg-orange-500/20'
+                                    }`}
+                                  >
+                                    {member.role === 'admin' ? 'Remover Admin' : 'Tornar Admin'}
+                                  </button>
+                                )}
+                                {member.role === 'admin' && member.id === profile?.id && (
+                                  <span className="px-4 py-2.5 bg-white/5 text-slate-500 rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/10">
+                                    Você
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+
+                          {totalPages > 1 && (
+                            <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                                Página {currentPage} de {totalPages}
+                              </p>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  disabled={currentPage === 1}
+                                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                  className="p-3 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                >
+                                  <ChevronLeft className="w-5 h-5" />
+                                </button>
+                                <button
+                                  disabled={currentPage === totalPages}
+                                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                  className="p-3 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                >
+                                  <ChevronRight className="w-5 h-5" />
+                                </button>
+                              </div>
+                            </div>
                           )}
-                          {member.role === 'admin' && member.id === profile?.id && (
-                            <span className="px-4 py-2.5 bg-white/5 text-slate-500 rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/10">
-                              Você
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
               )}
             </div>
