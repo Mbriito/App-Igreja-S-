@@ -365,23 +365,23 @@ export const Admin: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-8 pb-32 px-1">
-      <div className="space-y-2">
+    <div className="w-full max-w-full overflow-hidden space-y-6 sm:space-y-8 pb-32 px-0 sm:px-1">
+      <div className="space-y-2 min-w-0">
         <h2 className="text-3xl font-black text-white uppercase tracking-tight">Admin</h2>
         <p className="text-[10px] text-slate-500 font-bold tracking-[0.2em] uppercase">Gerenciamento da Comunidade</p>
       </div>
 
-      <div className="flex p-1.5 bg-slate-900 border border-white/5 rounded-[2rem] overflow-x-auto no-scrollbar shadow-2xl gap-2">
+      <div className="w-full max-w-full flex flex-wrap sm:flex-nowrap p-1.5 bg-slate-900 border border-white/5 rounded-3xl sm:rounded-[2rem] shadow-2xl gap-1.5 sm:gap-2">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id as any)}
-            className={`relative flex-1 flex-shrink-0 min-w-[120px] py-4 px-4 rounded-2xl text-[9px] font-black uppercase tracking-[0.15em] transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
+            className={`relative flex-1 min-w-[90px] py-3 sm:py-4 px-2.5 sm:px-4 rounded-2xl text-[9px] font-black uppercase tracking-[0.12em] sm:tracking-[0.15em] transition-all whitespace-nowrap flex items-center justify-center gap-1.5 sm:gap-2 ${
               tab === t.id ? 'bg-orange-500 text-slate-950 shadow-xl shadow-orange-500/20' : 'text-slate-500 hover:text-white'
             }`}
           >
-            <t.icon className="w-3.5 h-3.5" />
-            {t.label}
+            <t.icon className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>{t.label}</span>
           </button>
         ))}
       </div>
@@ -392,7 +392,7 @@ export const Admin: React.FC = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          className="bg-slate-900/50 backdrop-blur-xl rounded-[2.5rem] border border-white/10 p-8 shadow-2xl"
+          className="w-full max-w-full overflow-hidden bg-slate-900/50 backdrop-blur-xl rounded-3xl sm:rounded-[2.5rem] border border-white/10 p-4 sm:p-8 shadow-2xl"
         >
           {success && (
             <motion.div 
@@ -406,12 +406,12 @@ export const Admin: React.FC = () => {
           )}
 
           {tab === 'notices' ? (
-            <div className="space-y-12">
-              <form onSubmit={handleCreateNotice} className="space-y-8">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3">
-                    <Edit3 className="w-6 h-6 text-[#df982a]" />
-                    {editingNotice ? 'Editar Aviso' : 'Novo Aviso'}
+            <div className="space-y-10 sm:space-y-12 w-full max-w-full min-w-0">
+              <form onSubmit={handleCreateNotice} className="space-y-6 sm:space-y-8 w-full max-w-full min-w-0">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-lg sm:text-xl font-black text-white uppercase tracking-tight flex items-center gap-3 min-w-0">
+                    <Edit3 className="w-5 h-5 sm:w-6 sm:h-6 text-[#df982a] flex-shrink-0" />
+                    <span className="truncate">{editingNotice ? 'Editar Aviso' : 'Novo Aviso'}</span>
                   </h3>
                   {editingNotice && (
                     <button 
@@ -424,49 +424,49 @@ export const Admin: React.FC = () => {
                         setEventDate('');
                         setImagePreview(null);
                       }}
-                      className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:underline"
+                      className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:underline flex-shrink-0"
                     >
                       Cancelar
                     </button>
                   )}
                 </div>
 
-                <div className="space-y-6">
-                  <div className="space-y-2">
+                <div className="space-y-5 sm:space-y-6 w-full max-w-full min-w-0">
+                  <div className="space-y-2 min-w-0">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Título do Aviso</label>
                     <input
                       required
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white transition-all"
+                      className="w-full max-w-full min-w-0 px-4 sm:px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white transition-all"
                       placeholder="Ex: Culto de Jovens"
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 min-w-0">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Conteúdo</label>
                     <textarea
                       required
                       rows={4}
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
-                      className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-orange-500/10 focus:border-[#df982a] outline-none resize-none text-sm font-bold text-white transition-all"
+                      className="w-full max-w-full min-w-0 px-4 sm:px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-orange-500/10 focus:border-[#df982a] outline-none resize-none text-sm font-bold text-white transition-all"
                       placeholder="Descreva as informações importantes..."
                     />
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-3 min-w-0">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Mídia do Mural</label>
                     {!imagePreview ? (
-                      <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-white/10 rounded-3xl cursor-pointer hover:bg-white/5 hover:border-orange-500/20 transition-all group">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <label className="flex flex-col items-center justify-center w-full max-w-full h-40 border-2 border-dashed border-white/10 rounded-3xl cursor-pointer hover:bg-white/5 hover:border-orange-500/20 transition-all group">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
                           <ImageIcon className="w-10 h-10 text-slate-600 mb-3 group-hover:text-[#df982a] transition-colors" />
                           <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Selecionar Imagem</p>
                         </div>
                         <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
                       </label>
                     ) : (
-                      <div className="relative w-full aspect-video rounded-3xl overflow-hidden border border-white/10 bg-slate-950 flex items-center justify-center group shadow-inner">
+                      <div className="relative w-full max-w-full aspect-video rounded-2xl sm:rounded-3xl overflow-hidden border border-white/10 bg-slate-950 flex items-center justify-center group shadow-inner">
                         <img src={imagePreview} className="max-w-full max-h-full object-contain" alt="Preview" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
                           <button
@@ -482,28 +482,28 @@ export const Admin: React.FC = () => {
                     <p className="text-[9px] text-slate-600 font-bold uppercase tracking-widest text-center">Tamanho ideal: 1280x720px (16:9)</p>
                   </div>
 
-                  <div className="flex items-center gap-4 p-5 bg-white/5 rounded-2xl border border-white/10 transition-colors hover:bg-white/10">
+                  <div className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-white/5 rounded-2xl border border-white/10 transition-colors hover:bg-white/10 min-w-0">
                     <input
                       type="checkbox"
                       id="is_event"
                       checked={isEvent}
                       onChange={(e) => setIsEvent(e.target.checked)}
-                      className="w-6 h-6 rounded-lg border-white/10 bg-slate-950 text-[#df982a] focus:ring-[#df982a] cursor-pointer"
+                      className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg border-white/10 bg-slate-950 text-[#df982a] focus:ring-[#df982a] cursor-pointer flex-shrink-0"
                     />
-                    <label htmlFor="is_event" className="flex-1 text-xs text-white font-black uppercase tracking-widest cursor-pointer">
+                    <label htmlFor="is_event" className="flex-1 min-w-0 text-xs text-white font-black uppercase tracking-wider sm:tracking-widest cursor-pointer break-words">
                       Este aviso é um Evento com data?
                     </label>
                   </div>
 
                   {isEvent && (
-                    <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                    <div className="space-y-2 animate-in slide-in-from-top-2 duration-300 min-w-0">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Data e Hora</label>
                       <input
                         type="datetime-local"
                         required
                         value={eventDate}
                         onChange={(e) => setEventDate(e.target.value)}
-                        className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white transition-all [color-scheme:dark]"
+                        className="w-full max-w-full min-w-0 appearance-none px-4 sm:px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white transition-all [color-scheme:dark]"
                       />
                     </div>
                   )}
@@ -512,63 +512,77 @@ export const Admin: React.FC = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-5 bg-[#df982a] text-slate-950 font-black uppercase tracking-[0.2em] rounded-3xl shadow-2xl shadow-orange-500/20 hover:bg-orange-600 disabled:opacity-50 flex items-center justify-center gap-3 transition-all active:scale-95"
+                  className="w-full max-w-full py-4 sm:py-5 px-4 bg-[#df982a] text-slate-950 font-black text-xs sm:text-sm uppercase tracking-[0.18em] rounded-2xl sm:rounded-3xl shadow-2xl shadow-orange-500/20 hover:bg-orange-600 disabled:opacity-50 flex items-center justify-center gap-3 transition-all active:scale-95"
                 >
                   {loading ? (
                     <div className="w-6 h-6 border-4 border-slate-950 border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <>{editingNotice ? <><CheckCircle className="w-6 h-6" /> Salvar Alterações</> : <><Send className="w-6 h-6" /> Publicar no Mural</>}</>
+                    <>{editingNotice ? <><CheckCircle className="w-5 h-5 flex-shrink-0" /> Salvar Alterações</> : <><Send className="w-5 h-5 flex-shrink-0" /> Publicar no Mural</>}</>
                   )}
                 </button>
               </form>
 
-              <div className="pt-12 border-t border-white/5 space-y-8">
-                <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3">
-                  <Megaphone className="w-6 h-6 text-[#df982a]" />
+              <div className="pt-10 sm:pt-12 border-t border-white/5 space-y-6 sm:space-y-8 w-full max-w-full min-w-0">
+                <h3 className="text-lg sm:text-xl font-black text-white uppercase tracking-tight flex items-center gap-3">
+                  <Megaphone className="w-5 h-5 sm:w-6 sm:h-6 text-[#df982a] flex-shrink-0" />
                   Avisos Ativos
                 </h3>
-                <div className="grid gap-3">
+                <div className="grid grid-cols-1 w-full min-w-0 gap-3">
                   {notices.map(notice => (
-                    <div key={notice.id} className="bg-slate-900/90 border border-amber-500/20 hover:border-amber-500/40 rounded-2xl p-4 shadow-lg transition-all flex items-center justify-between gap-3 group/card">
-                      <div className="flex items-center gap-4 min-w-0">
+                    <div
+                      key={notice.id}
+                      className="w-full max-w-full min-w-0 overflow-hidden bg-slate-900/90 border border-amber-500/20 hover:border-amber-500/40 rounded-2xl p-3.5 sm:p-4 shadow-lg transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 group/card"
+                    >
+                      <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0 w-full">
                         {notice.image_url ? (
-                          <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border border-white/5 shadow-inner">
+                          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden flex-shrink-0 border border-white/5 shadow-inner bg-slate-950">
                             <img src={notice.image_url} className="w-full h-full object-cover" alt="" />
                           </div>
                         ) : (
-                          <div className="w-14 h-14 rounded-xl bg-slate-950 border border-white/5 flex items-center justify-center text-slate-600 flex-shrink-0">
+                          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-slate-950 border border-white/5 flex items-center justify-center text-slate-600 flex-shrink-0">
                             <Megaphone className="w-5 h-5 text-[#df982a]/60" />
                           </div>
                         )}
-                        <div className="min-w-0">
-                          <p className="text-sm sm:text-base font-semibold text-slate-100 truncate tracking-tight">{notice.title}</p>
-                          <div className="mt-1 flex flex-wrap gap-2">
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                          <p className="text-sm sm:text-base font-semibold text-slate-100 break-words line-clamp-2 tracking-tight leading-snug">
+                            {notice.title}
+                          </p>
+                          {notice.content && (
+                            <p className="text-xs text-slate-400 break-words line-clamp-2 mt-1 leading-relaxed">
+                              {notice.content}
+                            </p>
+                          )}
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
                             <span className={clsx(
-                              "text-[10px] font-bold px-2 py-0.5 rounded-md border inline-flex items-center gap-1 uppercase tracking-wider",
+                              "text-[10px] font-bold px-2.5 py-0.5 rounded-md border inline-flex items-center gap-1 uppercase tracking-wider",
                               notice.is_event 
                                 ? "text-amber-400 bg-amber-500/10 border-amber-500/20" 
                                 : "text-slate-400 bg-slate-500/10 border-slate-500/20"
                             )}>
-                              {notice.is_event ? <Sparkles className="w-2.5 h-2.5" /> : <Megaphone className="w-2.5 h-2.5" />}
+                              {notice.is_event ? <Sparkles className="w-2.5 h-2.5 flex-shrink-0" /> : <Megaphone className="w-2.5 h-2.5 flex-shrink-0" />}
                               {notice.is_event ? 'Evento' : 'Comunicado'}
                             </span>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center justify-end gap-2 flex-shrink-0 w-full sm:w-auto pt-2.5 sm:pt-0 border-t border-white/5 sm:border-t-0">
                         <button 
+                          type="button"
                           onClick={() => handleEditNotice(notice)}
                           className="p-2.5 rounded-xl bg-slate-800/60 hover:bg-amber-500/20 text-amber-400 transition-all border border-white/5 shadow-sm active:scale-90"
                           title="Editar"
+                          aria-label={`Editar aviso ${notice.title}`}
                         >
-                          <Edit3 className="w-5 h-5" />
+                          <Edit3 className="w-4 h-4 sm:w-5 sm:h-5" />
                         </button>
                         <button 
+                          type="button"
                           onClick={() => handleDeleteNotice(notice.id)}
                           className="p-2.5 rounded-xl bg-slate-800/60 hover:bg-rose-500/20 text-rose-400 transition-all border border-white/5 shadow-sm active:scale-90"
                           title="Excluir"
+                          aria-label={`Excluir aviso ${notice.title}`}
                         >
-                          <X className="w-5 h-5" />
+                          <X className="w-4 h-4 sm:w-5 sm:h-5" />
                         </button>
                       </div>
                     </div>
@@ -721,7 +735,7 @@ export const Admin: React.FC = () => {
                                     {(member.email || member.phone) && (
                                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium text-slate-400 pt-0.5">
                                         {member.email && (
-                                          <span className="inline-flex items-center gap-1 truncate max-w-[220px]">
+                                          <span className="inline-flex items-center gap-1 truncate max-w-full min-w-0">
                                             <Mail className="w-3 h-3 text-slate-500 flex-shrink-0" />
                                             <span className="truncate">{member.email}</span>
                                           </span>

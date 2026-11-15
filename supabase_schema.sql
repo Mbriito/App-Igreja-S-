@@ -180,6 +180,8 @@ CREATE POLICY "schedules_insert_policy" ON public.schedules FOR INSERT TO authen
 CREATE POLICY "prayers_select_policy" ON public.prayer_requests FOR SELECT TO authenticated USING (NOT is_private OR auth.uid() = user_id OR public.check_is_admin());
 CREATE POLICY "prayers_insert_policy" ON public.prayer_requests FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "prayers_update_policy" ON public.prayer_requests FOR UPDATE TO authenticated USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "prayers_delete_policy" ON public.prayer_requests;
+CREATE POLICY "prayers_delete_policy" ON public.prayer_requests FOR DELETE TO authenticated USING (auth.uid() = user_id OR public.check_is_admin());
 
 -- GATILHOS (Triggers)
 CREATE OR REPLACE FUNCTION public.handle_new_user()

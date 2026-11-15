@@ -22,9 +22,9 @@ export const Layout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] flex flex-col font-sans selection:bg-orange-500/30 selection:text-white pb-40">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#020617] flex flex-col font-sans selection:bg-orange-500/30 selection:text-white pb-40">
       {/* Premium Sticky Header */}
-      <header className="sticky top-0 z-40 w-full border-b border-white/5 bg-[#020617]/80 backdrop-blur-xl px-4 py-3.5 flex items-center justify-between shadow-2xl">
+      <header className="sticky top-0 z-40 w-full border-b border-white/5 bg-[#020617]/80 backdrop-blur-xl px-4 sm:px-6 py-3.5 flex items-center justify-between shadow-2xl">
         <div className="flex items-center gap-3">
           <div className="h-11 w-11 overflow-hidden flex items-center justify-center bg-slate-900 rounded-xl p-1.5 shadow-lg shadow-black/20 group border border-white/10">
             <img 
@@ -50,19 +50,19 @@ export const Layout: React.FC = () => {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-6 animate-in fade-in duration-700">
+      <main className="flex-1 w-full max-w-2xl min-w-0 mx-auto px-4 sm:px-6 py-6 overflow-hidden animate-in fade-in duration-700">
         <OfflineIndicator />
-        <div className="min-h-screen">
+        <div className="min-h-screen w-full max-w-full min-w-0">
           <Outlet />
         </div>
         
         {/* Modern Footer Info */}
-        <footer className="mt-20 mb-10 py-10 border-t border-white/5 flex flex-col items-center text-center space-y-6">
-          <div className="space-y-2">
+        <footer className="mt-20 mb-10 py-10 border-t border-white/5 flex flex-col items-center text-center space-y-6 w-full max-w-full">
+          <div className="space-y-2 w-full max-w-full">
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.25em]">Contato da Igreja</p>
             <a 
               href="mailto:secretaria@aigrejadavila-se.online" 
-              className="text-sm font-black text-white hover:text-[#df982a] transition-all bg-white/5 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 block"
+              className="text-xs sm:text-sm font-black text-white hover:text-[#df982a] transition-all bg-white/5 backdrop-blur-md px-4 sm:px-6 py-4 rounded-2xl border border-white/10 inline-block max-w-full break-all"
             >
               secretaria@aigrejadavila-se.online
             </a>
@@ -76,8 +76,8 @@ export const Layout: React.FC = () => {
       </main>
 
       {/* Floating Bottom Navigation - Highly Responsive */}
-      <nav className="fixed bottom-6 left-6 right-6 z-50 h-18 bg-slate-900/90 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] safe-area-bottom overflow-hidden">
-        <div className="flex h-full items-center justify-around px-2">
+      <nav className="fixed bottom-4 sm:bottom-6 left-3 right-3 sm:left-6 sm:right-6 z-50 h-18 bg-slate-900/90 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] safe-area-bottom overflow-hidden">
+        <div className="flex h-full items-center justify-around px-1 sm:px-2">
           {navItems.map((item) => {
             const isActive = location.pathname === item.to;
             return (
@@ -86,8 +86,8 @@ export const Layout: React.FC = () => {
                 to={item.to}
                 className={({ isActive }) =>
                   clsx(
-                    "relative flex flex-col items-center justify-center gap-1.5 transition-all duration-500 px-4 min-w-[64px]",
-                    isActive ? "text-[#df982a] scale-110" : "text-slate-500 hover:text-white"
+                    "relative flex-1 min-w-0 flex flex-col items-center justify-center gap-1.5 transition-all duration-500 px-1 sm:px-3 py-1.5",
+                    isActive ? "text-[#df982a] sm:scale-105" : "text-slate-500 hover:text-white"
                   )
                 }
               >
