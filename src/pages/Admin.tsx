@@ -1,19 +1,24 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
-import { Megaphone, Calendar, Users, Send, CheckCircle, Image as ImageIcon, X, Edit3, Shield, Search, Sparkles, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Megaphone, Calendar, Users, Send, CheckCircle, Image as ImageIcon, X, Edit3, Shield, Search, Sparkles, Download, ChevronLeft, ChevronRight, UserPlus, Mail, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
+import { MemberFormModal, type MemberFormData, type MemberRecord } from '@/components/MemberFormModal';
 
 export const Admin: React.FC = () => {
   const { profile } = useAuth();
   const [tab, setTab] = useState<'notices' | 'schedules' | 'members'>('notices');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('Operação realizada com sucesso!');
   const [searchTerm, setSearchTerm] = useState('');
-  const [members, setMembers] = useState<any[]>([]);
+  const [members, setMembers] = useState<MemberRecord[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<any | null>(null);
+  const [selectedMember, setSelectedMember] = useState<MemberRecord | null>(null);
+  const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<MemberRecord | null>(null);
+  const [savingMember, setSavingMember] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
@@ -39,7 +44,102 @@ export const Admin: React.FC = () => {
     
     if (!error) {
       setMembers(prev => prev.map(m => m.id === userId ? { ...m, role: newRole } : m));
-      showSuccess();
+      if (selectedMember?.id === userId) {
+        setSelectedMember(prev => prev ? { ...prev, role: newRole } : null);
+      }
+      showSuccess('Nível de acesso atualizado com sucesso!');
+    }
+  };
+
+  const handleOpenAddMember = () => {
+    setEditingMember(null);
+    setIsMemberModalOpen(true);
+  };
+
+  const handleOpenEditMember = (member: MemberRecord) => {
+    setEditingMember(member);
+    setIsMemberModalOpen(true);
+  };
+
+  const handleSaveMember = async (formData: MemberFormData) => {
+    setSavingMember(true);
+    try {
+      const payload = {
+        full_name: formData.name.trim(),
+        email: formData.email.trim() || null,
+        role: formData.role,
+        church_position: formData.church_position || 'Membro',
+        status: formData.status || 'Ativo',
+        phone: formData.phone.trim() || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (editingMember) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .update(payload)
+          .eq('id', editingMember.id)
+          .select()
+          .single();
+
+        if (error) {
+          if (error.code === '42703' || error.code === 'PGRST204') {
+            throw new Error('Colunas "email" ou "status" ausentes no banco. Execute o script supabase_schema.sql atualizado no SQL Editor do Supabase.');
+          }
+          if (error.code === '42501') {
+            throw new Error('Sem permissão (RLS) para atualizar este membro. Verifique as políticas no supabase_schema.sql.');
+          }
+          throw new Error(error.message || 'Erro ao atualizar cadastro do membro.');
+        }
+
+        const updatedRecord = (data || { ...editingMember, ...payload }) as MemberRecord;
+        setMembers(prev =>
+          prev
+            .map(m => (m.id === editingMember.id ? updatedRecord : m))
+            .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '', 'pt-BR'))
+        );
+
+        if (selectedMember?.id === editingMember.id) {
+          setSelectedMember(updatedRecord);
+        }
+
+        setIsMemberModalOpen(false);
+        setEditingMember(null);
+        showSuccess('Membro atualizado com sucesso!');
+      } else {
+        const newId = typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .insert({
+            id: newId,
+            ...payload,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          if (error.code === '42703' || error.code === 'PGRST204' || error.code === '23503' || error.code === '42501') {
+            throw new Error('Banco de dados precisa da atualização de schema/permissões. Execute o arquivo supabase_schema.sql atualizado no SQL Editor do Supabase.');
+          }
+          throw new Error(error.message || 'Erro ao cadastrar novo membro.');
+        }
+
+        const createdRecord = (data || { id: newId, ...payload }) as MemberRecord;
+        setMembers(prev =>
+          [createdRecord, ...prev].sort((a, b) =>
+            (a.full_name || '').localeCompare(b.full_name || '', 'pt-BR')
+          )
+        );
+        setCurrentPage(1);
+        setIsMemberModalOpen(false);
+        setEditingMember(null);
+        showSuccess('Membro cadastrado com sucesso!');
+      }
+    } finally {
+      setSavingMember(false);
     }
   };
 
@@ -210,28 +310,40 @@ export const Admin: React.FC = () => {
     setLoading(false);
   };
 
-  const showSuccess = () => {
+  const showSuccess = (message = 'Operação realizada com sucesso!') => {
+    setSuccessMessage(message);
     setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
+    setTimeout(() => setSuccess(false), 3500);
+  };
+
+  const getFilteredMembers = () => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter(m =>
+      m.full_name?.toLowerCase().includes(q) ||
+      m.email?.toLowerCase().includes(q) ||
+      m.phone?.toLowerCase().includes(q) ||
+      m.church_position?.toLowerCase().includes(q) ||
+      m.status?.toLowerCase().includes(q)
+    );
   };
 
   const handleExportCSV = () => {
-    const filteredMembers = members.filter(m => 
-      m.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredMembers = getFilteredMembers();
 
-    const headers = ["Nome", "E-mail", "Cargo", "Nivel de Acesso", "Telefone"];
+    const headers = ["Nome", "E-mail", "Cargo", "Status", "Nivel de Acesso", "Telefone"];
     const rows = filteredMembers.map(m => [
       m.full_name || '',
-      m.email || '', // Note: if email is not in profile, we might need to fetch it or skip
+      m.email || '',
       m.church_position || 'Membro',
+      m.status || 'Ativo',
       m.role || 'member',
       m.phone || ''
     ]);
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(r => r.map(val => `"${val.replace(/"/g, '""')}"`).join(','))
+      ...rows.map(r => r.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
     ].join('\n');
 
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -243,6 +355,7 @@ export const Admin: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const tabs = [
@@ -287,8 +400,8 @@ export const Admin: React.FC = () => {
               animate={{ opacity: 1, scale: 1 }}
               className="mb-8 bg-emerald-500/10 text-emerald-400 p-5 rounded-2xl border border-emerald-500/20 flex items-center gap-3"
             >
-              <CheckCircle className="w-6 h-6" />
-              <span className="text-xs font-black uppercase tracking-widest">Operação realizada com sucesso!</span>
+              <CheckCircle className="w-6 h-6 flex-shrink-0" />
+              <span className="text-xs font-black uppercase tracking-widest">{successMessage}</span>
             </motion.div>
           )}
 
@@ -517,28 +630,39 @@ export const Admin: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-8">
-              <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3">
-                <Users className="w-6 h-6 text-[#df982a]" />
-                Membros
-              </h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3">
+                  <Users className="w-6 h-6 text-[#df982a]" />
+                  Membros
+                </h3>
+                <button
+                  type="button"
+                  onClick={handleOpenAddMember}
+                  className="w-full sm:w-auto px-5 py-3.5 bg-[#df982a] hover:bg-amber-500 text-slate-950 rounded-2xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 transition-all active:scale-95"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Novo Membro
+                </button>
+              </div>
               
               <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
                 <div className="relative group flex-1 w-full">
                   <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-[#df982a] transition-colors" />
                   <input
                     type="text"
-                    placeholder="Pesquisar membro pelo nome..."
+                    placeholder="Pesquisar por nome, e-mail, cargo ou status..."
                     value={searchTerm}
                     onChange={(e) => {
                       setSearchTerm(e.target.value);
                       setCurrentPage(1);
                     }}
-                    className="w-full pl-14 pr-6 py-5 bg-white/5 border border-white/10 rounded-[1.5rem] focus:ring-2 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white placeholder-slate-600 transition-all"
+                    className="w-full pl-14 pr-6 py-4 bg-white/5 border border-white/10 rounded-[1.5rem] focus:ring-2 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white placeholder-slate-600 transition-all"
                   />
                 </div>
                 <button
+                  type="button"
                   onClick={handleExportCSV}
-                  className="w-full sm:w-auto px-6 py-5 bg-slate-900 border border-amber-500/30 hover:border-amber-500/60 rounded-2xl flex items-center justify-center gap-3 text-slate-100 text-xs font-black uppercase tracking-widest transition-all group"
+                  className="w-full sm:w-auto px-6 py-4 bg-slate-900 border border-amber-500/30 hover:border-amber-500/60 rounded-2xl flex items-center justify-center gap-3 text-slate-100 text-xs font-black uppercase tracking-widest transition-all group flex-shrink-0"
                 >
                   <Download className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
                   Baixar Lista (CSV)
@@ -553,9 +677,7 @@ export const Admin: React.FC = () => {
                 <div className="space-y-6">
                   <div className="divide-y divide-white/5">
                     {(() => {
-                      const filtered = members.filter(m => 
-                        m.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
-                      );
+                      const filtered = getFilteredMembers();
                       const totalPages = Math.ceil(filtered.length / itemsPerPage);
                       const displayed = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
@@ -565,44 +687,89 @@ export const Admin: React.FC = () => {
 
                       return (
                         <>
-                          {displayed.map(member => (
-                            <div key={member.id} className="py-6 flex items-center justify-between gap-6 group hover:bg-white/5 px-4 -mx-4 rounded-2xl transition-all">
-                              <button 
-                                onClick={() => setSelectedMember(member)}
-                                className="flex items-center gap-4 min-w-0 text-left hover:opacity-80 transition-opacity flex-1"
-                              >
-                                <div className="w-14 h-14 rounded-2xl bg-slate-950 border border-white/10 flex items-center justify-center text-[#df982a] font-black text-xl uppercase flex-shrink-0 shadow-lg">
-                                  {member.full_name?.charAt(0) || 'U'}
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-black text-white truncate uppercase tracking-tight">{member.full_name}</p>
-                                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">
-                                    {member.church_position || 'Membro'}
-                                  </p>
-                                </div>
-                              </button>
-                              
-                              <div className="flex items-center gap-3">
-                                {member.id !== profile?.id && (
+                          {displayed.map(member => {
+                            const memberStatus = member.status || 'Ativo';
+                            return (
+                              <div key={member.id} className="py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:bg-white/5 px-4 -mx-4 rounded-2xl transition-all">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedMember(member)}
+                                  className="flex items-start sm:items-center gap-4 min-w-0 text-left hover:opacity-90 transition-opacity flex-1"
+                                >
+                                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-slate-950 border border-amber-500/20 flex items-center justify-center text-[#df982a] font-black text-lg sm:text-xl uppercase flex-shrink-0 shadow-lg">
+                                    {member.full_name?.charAt(0) || 'U'}
+                                  </div>
+                                  <div className="min-w-0 flex-1 space-y-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <p className="text-sm font-black text-white truncate uppercase tracking-tight">
+                                        {member.full_name || 'Sem Nome'}
+                                      </p>
+                                      <span className={clsx(
+                                        "text-[9px] font-black px-2 py-0.5 rounded-md border uppercase tracking-wider",
+                                        memberStatus === 'Ativo'
+                                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                          : memberStatus === 'Inativo' || memberStatus === 'Transferido'
+                                          ? "bg-slate-500/10 text-slate-400 border-slate-500/20"
+                                          : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                      )}>
+                                        {memberStatus}
+                                      </span>
+                                    </div>
+                                    <p className="text-[10px] font-black text-amber-400/80 uppercase tracking-[0.18em]">
+                                      {member.church_position || 'Membro'} {member.role === 'admin' ? '• ADMIN' : ''}
+                                    </p>
+                                    {(member.email || member.phone) && (
+                                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium text-slate-400 pt-0.5">
+                                        {member.email && (
+                                          <span className="inline-flex items-center gap-1 truncate max-w-[220px]">
+                                            <Mail className="w-3 h-3 text-slate-500 flex-shrink-0" />
+                                            <span className="truncate">{member.email}</span>
+                                          </span>
+                                        )}
+                                        {member.phone && (
+                                          <span className="inline-flex items-center gap-1">
+                                            <Phone className="w-3 h-3 text-slate-500 flex-shrink-0" />
+                                            <span>{member.phone}</span>
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </button>
+                                
+                                <div className="flex items-center justify-end gap-2 flex-shrink-0">
                                   <button
-                                    onClick={() => toggleAdmin(member.id, member.role)}
-                                    className={`px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
-                                      member.role === 'admin' 
-                                        ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20' 
-                                        : 'bg-orange-500/10 text-[#df982a] border border-orange-500/20 hover:bg-orange-500/20'
-                                    }`}
+                                    type="button"
+                                    onClick={() => handleOpenEditMember(member)}
+                                    className="p-2.5 rounded-xl bg-slate-800/70 hover:bg-amber-500/20 text-amber-400 border border-white/10 transition-all active:scale-95"
+                                    title="Editar membro"
+                                    aria-label={`Editar ${member.full_name || 'membro'}`}
                                   >
-                                    {member.role === 'admin' ? 'Remover Admin' : 'Tornar Admin'}
+                                    <Edit3 className="w-4 h-4" />
                                   </button>
-                                )}
-                                {member.role === 'admin' && member.id === profile?.id && (
-                                  <span className="px-4 py-2.5 bg-white/5 text-slate-500 rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/10">
-                                    Você
-                                  </span>
-                                )}
+
+                                  {member.id !== profile?.id && (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleAdmin(member.id, member.role || 'member')}
+                                      className={`px-3.5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                                        member.role === 'admin' 
+                                          ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20' 
+                                          : 'bg-orange-500/10 text-[#df982a] border border-orange-500/20 hover:bg-orange-500/20'
+                                      }`}
+                                    >
+                                      {member.role === 'admin' ? 'Remover Admin' : 'Tornar Admin'}
+                                    </button>
+                                  )}
+                                  {member.role === 'admin' && member.id === profile?.id && (
+                                    <span className="px-3.5 py-2.5 bg-white/5 text-slate-500 rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/10">
+                                      Você
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
 
                           {totalPages > 1 && (
                             <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -611,18 +778,22 @@ export const Admin: React.FC = () => {
                               </p>
                               <div className="flex items-center gap-2">
                                 <button
+                                  type="button"
                                   disabled={currentPage === 1}
                                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                  className="p-3 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                  className="px-4 py-2.5 bg-slate-900 border border-amber-500/30 rounded-xl text-slate-100 hover:border-amber-500/60 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest"
                                 >
-                                  <ChevronLeft className="w-5 h-5" />
+                                  <ChevronLeft className="w-4 h-4 text-amber-400" />
+                                  Anterior
                                 </button>
                                 <button
+                                  type="button"
                                   disabled={currentPage === totalPages}
                                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                  className="p-3 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                  className="px-4 py-2.5 bg-slate-900 border border-amber-500/30 rounded-xl text-slate-100 hover:border-amber-500/60 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest"
                                 >
-                                  <ChevronRight className="w-5 h-5" />
+                                  Próxima
+                                  <ChevronRight className="w-4 h-4 text-amber-400" />
                                 </button>
                               </div>
                             </div>
@@ -670,12 +841,14 @@ export const Admin: React.FC = () => {
               </div>
 
               <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
-                <div className="grid grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
+                  <DetailItem label="E-mail" value={selectedMember.email} />
+                  <DetailItem label="Status / Categoria" value={selectedMember.status || 'Ativo'} />
                   <DetailItem label="Cargo" value={selectedMember.church_position} />
                   <DetailItem label="Ministérios" value={selectedMember.active_ministries} />
                   <DetailItem label="Telefone" value={selectedMember.phone} />
                   <DetailItem label="Nascimento" value={selectedMember.birth_date} />
-                  <DetailItem label="Gênero" value={selectedMember.gender === 'M' ? 'Masculino' : 'Feminino'} />
+                  <DetailItem label="Gênero" value={selectedMember.gender === 'M' ? 'Masculino' : selectedMember.gender === 'F' ? 'Feminino' : '-'} />
                   <DetailItem label="Escolaridade" value={selectedMember.education_level} />
                   <DetailItem label="Estado Civil" value={selectedMember.marital_status} />
                   <DetailItem label="Profissão" value={selectedMember.profession} />
@@ -686,12 +859,12 @@ export const Admin: React.FC = () => {
                     <div className="w-4 h-[1px] bg-slate-700" /> Endereço
                   </h4>
                   <p className="text-sm font-bold text-slate-300 leading-relaxed bg-white/5 p-5 rounded-3xl border border-white/10">
-                    {selectedMember.address_street}, {selectedMember.address_number}
+                    {selectedMember.address_street || '-'}, {selectedMember.address_number || '-'}
                     {selectedMember.address_complement && ` - ${selectedMember.address_complement}`}
                     <br />
-                    {selectedMember.address_neighborhood} - {selectedMember.address_city}/{selectedMember.address_state}
+                    {selectedMember.address_neighborhood || '-'} - {selectedMember.address_city || '-'}/{selectedMember.address_state || '-'}
                     <br />
-                    CEP: {selectedMember.address_zip}
+                    CEP: {selectedMember.address_zip || '-'}
                   </p>
                 </div>
 
@@ -706,10 +879,19 @@ export const Admin: React.FC = () => {
                 </div>
               </div>
 
-              <div className="p-8 bg-slate-950/50 border-t border-white/5">
+              <div className="p-6 sm:p-8 bg-slate-950/50 border-t border-white/5 flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleOpenEditMember(selectedMember)}
+                  className="flex-1 py-4 bg-[#df982a] hover:bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-[0.2em] rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  Editar Membro
+                </button>
                 <button 
+                  type="button"
                   onClick={() => setSelectedMember(null)}
-                  className="w-full py-5 bg-white/5 text-white font-black uppercase tracking-[0.2em] rounded-2xl border border-white/10 hover:bg-white/10 transition-all"
+                  className="flex-1 py-4 bg-white/5 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl border border-white/10 hover:bg-white/10 transition-all"
                 >
                   Fechar Detalhes
                 </button>
@@ -718,6 +900,18 @@ export const Admin: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Add / Edit Member Modal */}
+      <MemberFormModal
+        isOpen={isMemberModalOpen}
+        initialMember={editingMember}
+        isSaving={savingMember}
+        onClose={() => {
+          setIsMemberModalOpen(false);
+          setEditingMember(null);
+        }}
+        onSubmit={handleSaveMember}
+      />
     </div>
   );
 };

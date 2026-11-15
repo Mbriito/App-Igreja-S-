@@ -3,9 +3,11 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import type { Session, User } from '@supabase/supabase-js';
 import { AlertCircle, ExternalLink } from 'lucide-react';
 
-interface Profile {
+export interface Profile {
   id: string;
   full_name: string | null;
+  email?: string | null;
+  status?: string | null;
   role: 'member' | 'admin';
   gender?: 'M' | 'F';
   birth_date?: string;

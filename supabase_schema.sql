@@ -1,10 +1,12 @@
 -- Script SQL para o Supabase
 -- Execute este script no SQL Editor do seu projeto Supabase
 
--- 1. Tabela de Perfis (estende auth.users)
+-- 1. Tabela de Perfis / Membros
 CREATE TABLE IF NOT EXISTS public.profiles (
-  id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   full_name TEXT,
+  email TEXT,
+  status TEXT DEFAULT 'Ativo',
   gender TEXT CHECK (gender IN ('M', 'F')),
   birth_date DATE,
   rg TEXT,
@@ -40,13 +42,19 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   prev_church_phone TEXT,
   
   -- Posição na Igreja
-  church_position TEXT, -- Visitante, Novo convertido, Jovem, Membro, Obreiro, Diácono, Evangelista, Presbítero, Pastor, Missionário
+  church_position TEXT DEFAULT 'Membro', -- Visitante, Novo convertido, Jovem, Membro, Obreiro, Diácono, Evangelista, Presbítero, Pastor, Missionário
   active_ministries TEXT,
   children_count INTEGER DEFAULT 0,
   
   role TEXT DEFAULT 'member' CHECK (role IN ('member', 'admin')),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Migrações idempotentes para bancos já existentes
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Ativo';
+ALTER TABLE public.profiles ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_id_fkey;
 
 -- Gatilho para atualizar o updated_at automaticamente
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
@@ -57,6 +65,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS on_profile_updated ON public.profiles;
 CREATE TRIGGER on_profile_updated
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
@@ -155,7 +164,9 @@ END $$;
 -- PERFIS
 CREATE POLICY "profiles_select_policy" ON public.profiles FOR SELECT TO authenticated USING (auth.uid() = id OR public.check_is_admin());
 CREATE POLICY "profiles_update_policy" ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id OR public.check_is_admin());
-CREATE POLICY "profiles_insert_policy" ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
+CREATE POLICY "profiles_insert_policy" ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id OR public.check_is_admin());
+DROP POLICY IF EXISTS "profiles_delete_policy" ON public.profiles;
+CREATE POLICY "profiles_delete_policy" ON public.profiles FOR DELETE TO authenticated USING (public.check_is_admin());
 
 -- AVISOS
 CREATE POLICY "notices_select_policy" ON public.notices FOR SELECT TO authenticated USING (true);
@@ -179,11 +190,13 @@ BEGIN
   -- Verifica se é o primeiro usuário do sistema
   SELECT NOT EXISTS (SELECT 1 FROM public.profiles) INTO is_first_user;
 
-  INSERT INTO public.profiles (id, full_name, role)
+  INSERT INTO public.profiles (id, full_name, email, role, status)
   VALUES (
     new.id, 
-    new.raw_user_meta_data->>'full_name', 
-    CASE WHEN is_first_user THEN 'admin' ELSE 'member' END
+    new.raw_user_meta_data->>'full_name',
+    new.email,
+    CASE WHEN is_first_user THEN 'admin' ELSE 'member' END,
+    'Ativo'
   );
   RETURN new;
 END;
