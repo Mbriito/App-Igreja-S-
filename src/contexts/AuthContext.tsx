@@ -8,6 +8,7 @@ export interface Profile {
   full_name: string | null;
   email?: string | null;
   status?: string | null;
+  avatar_url?: string | null;
   role: 'member' | 'admin';
   gender?: 'M' | 'F';
   birth_date?: string;
@@ -48,6 +49,7 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -59,39 +61,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [tablesMissing, setTablesMissing] = useState(false);
-
-  useEffect(() => {
-    if (!isSupabaseConfigured) {
-      setLoading(false);
-      return;
-    }
-
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      setSession(initialSession);
-      setUser(initialSession?.user ?? null);
-      if (initialSession?.user) {
-        fetchProfile(initialSession.user.id, initialSession.user.email, initialSession.user.user_metadata);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      if (currentSession?.user) {
-        fetchProfile(currentSession.user.id, currentSession.user.email, currentSession.user.user_metadata);
-      } else {
-        setProfile(null);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
   const [rlsError, setRlsError] = useState(false);
 
   const fetchProfile = async (userId: string, userEmail?: string, metaData?: any) => {
@@ -112,7 +81,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (!data) {
-        // Profile doesn't exist, create it (fallback if trigger didn't run)
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
           .insert({
@@ -142,6 +110,86 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    let initialSessionHandled = false;
+
+    const handleSession = async (currentSession: Session | null) => {
+      if (!isMounted) return;
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+
+      if (currentSession?.user) {
+        await fetchProfile(
+          currentSession.user.id,
+          currentSession.user.email,
+          currentSession.user.user_metadata
+        );
+      } else {
+        setProfile(null);
+        setLoading(false);
+      }
+    };
+
+    supabase.auth
+      .getSession()
+      .then(({ data: { session: initialSession }, error }) => {
+        if (!isMounted) return;
+        if (error) {
+          console.error('Session verification error:', error);
+          handleSession(null);
+          return;
+        }
+        if (!initialSessionHandled) {
+          initialSessionHandled = true;
+          handleSession(initialSession);
+        }
+      })
+      .catch((err) => {
+        console.error('Unexpected auth session error:', err);
+        if (isMounted) {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+        }
+      });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      if (!isMounted) return;
+      if (event === 'INITIAL_SESSION' && initialSessionHandled) return;
+      initialSessionHandled = true;
+
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+
+      handleSession(currentSession);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id, user.email, user.user_metadata);
+    }
+  };
+
   const retry = () => {
     if (user) {
       setLoading(true);
@@ -152,7 +200,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+    }
   };
 
   if (!isSupabaseConfigured || tablesMissing || rlsError) {
@@ -230,7 +284,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ session, user, profile, loading, refreshProfile, signOut }}>
       {children}
     </AuthContext.Provider>
   );

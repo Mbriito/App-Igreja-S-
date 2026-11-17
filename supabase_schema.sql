@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- Migrações idempotentes para bancos já existentes
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Ativo';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 ALTER TABLE public.profiles ALTER COLUMN id SET DEFAULT gen_random_uuid();
 ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_id_fkey;
 
@@ -75,17 +76,15 @@ CREATE TABLE IF NOT EXISTS public.notices (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   title TEXT NOT NULL,
   content TEXT NOT NULL,
-  image_url TEXT, -- Nova coluna para fotos do mural
+  image_url TEXT,
   event_date TIMESTAMP WITH TIME ZONE,
+  expires_at TIMESTAMP WITH TIME ZONE,
   is_event BOOLEAN DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   created_by UUID REFERENCES public.profiles(id)
 );
 
--- INSTRUÇÕES PARA STORAGE (SUPABASE):
--- 1. Vá em 'Storage' no painel do Supabase.
--- 2. Crie um novo bucket chamado 'avisos'.
--- 3. Marque como 'Public' (Público) para que todos possam ver as imagens.
+ALTER TABLE public.notices ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE;
 
 -- 3. Tabela de Escalas
 CREATE TABLE IF NOT EXISTS public.schedules (
@@ -109,14 +108,36 @@ CREATE TABLE IF NOT EXISTS public.prayer_requests (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- 5. Tabela de Configurações do App (Banner da Home, Dados de Dízimos/Ofertas)
+CREATE TABLE IF NOT EXISTS public.app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_by UUID REFERENCES public.profiles(id)
+);
+
+-- Seed/Atualização idempotente da Chave PIX oficial
+INSERT INTO public.app_settings (key, value)
+VALUES
+  ('pix_key', 'aigrejadavilanase@gmail.com'),
+  ('pix_recipient', 'Igreja da Vila Sé'),
+  ('pix_bank', 'Banco / Instituição Financeira da Igreja')
+ON CONFLICT (key) DO UPDATE SET
+  value = CASE
+    WHEN public.app_settings.key = 'pix_key'
+      AND (public.app_settings.value IS NULL OR public.app_settings.value = '' OR public.app_settings.value = 'secretaria@aigrejadavila-se.online')
+    THEN EXCLUDED.value
+    ELSE public.app_settings.value
+  END;
+
 -- Habilitar Row Level Security (RLS)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.prayer_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
 
 -- FUNÇÕES DE SEGURANÇA (FIX RECURSION)
--- SECURITY DEFINER faz a função rodar com privilégios de superusuário (postgres), ignorando RLS.
 CREATE OR REPLACE FUNCTION public.check_is_admin()
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -130,7 +151,6 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 -- POLÍTICAS DE SEGURANÇA (RLS) - LIMPEZA E APLICAÇÃO
 DO $$ 
 BEGIN
-    -- Limpeza de políticas da tabela profiles
     DROP POLICY IF EXISTS "Profiles are viewable by owner or admins" ON public.profiles;
     DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
     DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
@@ -141,26 +161,34 @@ BEGIN
     DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
     DROP POLICY IF EXISTS "Public profiles are viewable by authenticated users" ON public.profiles;
 
-    -- Limpeza de políticas das outras tabelas
     DROP POLICY IF EXISTS "notices_select_policy" ON public.notices;
     DROP POLICY IF EXISTS "notices_insert_policy" ON public.notices;
+    DROP POLICY IF EXISTS "notices_update_policy" ON public.notices;
+    DROP POLICY IF EXISTS "notices_delete_policy" ON public.notices;
     DROP POLICY IF EXISTS "Notices are viewable by authenticated users" ON public.notices;
     DROP POLICY IF EXISTS "Only admins can insert notices" ON public.notices;
 
     DROP POLICY IF EXISTS "schedules_select_policy" ON public.schedules;
     DROP POLICY IF EXISTS "schedules_insert_policy" ON public.schedules;
+    DROP POLICY IF EXISTS "schedules_update_policy" ON public.schedules;
+    DROP POLICY IF EXISTS "schedules_delete_policy" ON public.schedules;
     DROP POLICY IF EXISTS "Schedules are viewable by registered members" ON public.schedules;
     DROP POLICY IF EXISTS "Only admins can insert schedules" ON public.schedules;
 
     DROP POLICY IF EXISTS "prayers_select_policy" ON public.prayer_requests;
     DROP POLICY IF EXISTS "prayers_insert_policy" ON public.prayer_requests;
     DROP POLICY IF EXISTS "prayers_update_policy" ON public.prayer_requests;
+    DROP POLICY IF EXISTS "prayers_delete_policy" ON public.prayer_requests;
     DROP POLICY IF EXISTS "Public prayer requests are viewable by everyone" ON public.prayer_requests;
     DROP POLICY IF EXISTS "Users can create prayer requests" ON public.prayer_requests;
     DROP POLICY IF EXISTS "Users can update own prayer requests" ON public.prayer_requests;
+
+    DROP POLICY IF EXISTS "app_settings_select_policy" ON public.app_settings;
+    DROP POLICY IF EXISTS "app_settings_insert_policy" ON public.app_settings;
+    DROP POLICY IF EXISTS "app_settings_update_policy" ON public.app_settings;
+    DROP POLICY IF EXISTS "app_settings_delete_policy" ON public.app_settings;
 END $$;
 
--- Aplicar novas políticas
 -- PERFIS
 CREATE POLICY "profiles_select_policy" ON public.profiles FOR SELECT TO authenticated USING (auth.uid() = id OR public.check_is_admin());
 CREATE POLICY "profiles_update_policy" ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id OR public.check_is_admin());
@@ -171,17 +199,44 @@ CREATE POLICY "profiles_delete_policy" ON public.profiles FOR DELETE TO authenti
 -- AVISOS
 CREATE POLICY "notices_select_policy" ON public.notices FOR SELECT TO authenticated USING (true);
 CREATE POLICY "notices_insert_policy" ON public.notices FOR INSERT TO authenticated WITH CHECK (public.check_is_admin());
+CREATE POLICY "notices_update_policy" ON public.notices FOR UPDATE TO authenticated USING (public.check_is_admin()) WITH CHECK (public.check_is_admin());
+CREATE POLICY "notices_delete_policy" ON public.notices FOR DELETE TO authenticated USING (public.check_is_admin());
 
 -- ESCALAS
 CREATE POLICY "schedules_select_policy" ON public.schedules FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid()));
 CREATE POLICY "schedules_insert_policy" ON public.schedules FOR INSERT TO authenticated WITH CHECK (public.check_is_admin());
+CREATE POLICY "schedules_update_policy" ON public.schedules FOR UPDATE TO authenticated USING (public.check_is_admin()) WITH CHECK (public.check_is_admin());
+CREATE POLICY "schedules_delete_policy" ON public.schedules FOR DELETE TO authenticated USING (public.check_is_admin());
 
 -- ORAÇÃO
 CREATE POLICY "prayers_select_policy" ON public.prayer_requests FOR SELECT TO authenticated USING (NOT is_private OR auth.uid() = user_id OR public.check_is_admin());
 CREATE POLICY "prayers_insert_policy" ON public.prayer_requests FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "prayers_update_policy" ON public.prayer_requests FOR UPDATE TO authenticated USING (auth.uid() = user_id);
-DROP POLICY IF EXISTS "prayers_delete_policy" ON public.prayer_requests;
 CREATE POLICY "prayers_delete_policy" ON public.prayer_requests FOR DELETE TO authenticated USING (auth.uid() = user_id OR public.check_is_admin());
+
+-- CONFIGURAÇÕES DO APP
+CREATE POLICY "app_settings_select_policy" ON public.app_settings FOR SELECT TO authenticated USING (true);
+CREATE POLICY "app_settings_insert_policy" ON public.app_settings FOR INSERT TO authenticated WITH CHECK (public.check_is_admin());
+CREATE POLICY "app_settings_update_policy" ON public.app_settings FOR UPDATE TO authenticated USING (public.check_is_admin()) WITH CHECK (public.check_is_admin());
+CREATE POLICY "app_settings_delete_policy" ON public.app_settings FOR DELETE TO authenticated USING (public.check_is_admin());
+
+-- STORAGE BUCKETS E POLÍTICAS (AVISOS E AVATARES)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('avisos', 'avisos', true), ('avatars', 'avatars', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DO $$
+BEGIN
+  DROP POLICY IF EXISTS "Public Read Media" ON storage.objects;
+  DROP POLICY IF EXISTS "Authenticated Upload Media" ON storage.objects;
+  DROP POLICY IF EXISTS "Authenticated Update Media" ON storage.objects;
+  DROP POLICY IF EXISTS "Authenticated Delete Media" ON storage.objects;
+END $$;
+
+CREATE POLICY "Public Read Media" ON storage.objects FOR SELECT TO public USING (bucket_id IN ('avisos', 'avatars'));
+CREATE POLICY "Authenticated Upload Media" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id IN ('avisos', 'avatars'));
+CREATE POLICY "Authenticated Update Media" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id IN ('avisos', 'avatars'));
+CREATE POLICY "Authenticated Delete Media" ON storage.objects FOR DELETE TO authenticated USING (bucket_id IN ('avisos', 'avatars'));
 
 -- GATILHOS (Triggers)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -189,7 +244,6 @@ RETURNS trigger AS $$
 DECLARE
   is_first_user BOOLEAN;
 BEGIN
-  -- Verifica se é o primeiro usuário do sistema
   SELECT NOT EXISTS (SELECT 1 FROM public.profiles) INTO is_first_user;
 
   INSERT INTO public.profiles (id, full_name, email, role, status)
@@ -203,11 +257,6 @@ BEGIN
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- COMANDO MANUAL PARA TORNAR ADMIN (Caso necessário):
--- UPDATE public.profiles SET role = 'admin' WHERE id = 'SEU_UUID_AQUI';
--- Ou pelo e-mail (mais fácil):
--- UPDATE public.profiles SET role = 'admin' WHERE id IN (SELECT id FROM auth.users WHERE email = 'seu-email@exemplo.com');
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created

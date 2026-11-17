@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminToast } from '@/contexts/AdminToastContext';
 import { supabase } from '@/lib/supabaseClient';
+import { uploadMediaFile } from '@/lib/mediaUpload';
 import { 
-  User, LogOut, Phone, Cake, Church, Save, MapPin, 
-  Briefcase, GraduationCap, Users, Heart, Shield, Landmark,
-  ChevronDown, ChevronUp, Mail, Edit3, PlusCircle, Instagram, Sparkles
+  User, LogOut, Phone, Church, Save, MapPin, 
+  Briefcase, Users, Heart, Shield, Landmark,
+  ChevronDown, ChevronUp, Mail, Camera, PlusCircle, Sparkles
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -50,8 +52,11 @@ const ProfileSection: React.FC<SectionProps> = ({ title, icon: Icon, children, i
 );
 
 export const Profile: React.FC = () => {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, refreshProfile, signOut } = useAuth();
+  const { showAdminToast } = useAdminToast();
   const [loading, setLoading] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -99,6 +104,7 @@ export const Profile: React.FC = () => {
 
   useEffect(() => {
     if (profile) {
+      setAvatarUrl(profile.avatar_url || null);
       setFormData({
         full_name: profile.full_name || '',
         gender: profile.gender || '',
@@ -130,6 +136,54 @@ export const Profile: React.FC = () => {
       });
     }
   }, [profile]);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setUploadingAvatar(true);
+    setMessage(null);
+    try {
+      const uploadRes = await uploadMediaFile(file, {
+        bucket: 'avatars',
+        folder: user.id,
+        maxWidth: 480,
+        quality: 0.85,
+      });
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          avatar_url: uploadRes.url,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        if (error.code === '42703' || error.code === 'PGRST204') {
+          throw new Error(
+            'Coluna "avatar_url" ausente no banco. Execute o script supabase_schema.sql atualizado no Supabase.'
+          );
+        }
+        throw error;
+      }
+
+      setAvatarUrl(uploadRes.url);
+      await refreshProfile();
+      setMessage({ type: 'success', text: 'Foto de perfil atualizada com sucesso!' });
+      if (profile?.role === 'admin') {
+        showAdminToast('Sua foto de perfil foi atualizada!');
+      }
+    } catch (err: any) {
+      setMessage({
+        type: 'error',
+        text: err?.message || 'Não foi possível atualizar a foto de perfil.',
+      });
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = '';
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -181,7 +235,11 @@ export const Profile: React.FC = () => {
 
       if (error) throw error;
 
+      await refreshProfile();
       setMessage({ type: 'success', text: 'Perfil atualizado com sucesso!' });
+      if (profile?.role === 'admin') {
+        showAdminToast('Cadastro de perfil salvo com sucesso!');
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       console.error('Update error:', err);
@@ -214,34 +272,63 @@ export const Profile: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-8 pb-40 max-w-lg mx-auto">
+    <div className="w-full max-w-lg mx-auto overflow-hidden space-y-8 pb-24">
       {/* Premium Header Card */}
-      <div className="bg-slate-900 rounded-[3rem] shadow-2xl p-10 flex flex-col items-center text-center relative overflow-hidden group border border-white/5">
-        <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:rotate-12 transition-transform duration-1000">
+      <div className="bg-slate-900 rounded-3xl sm:rounded-[3rem] shadow-2xl p-6 sm:p-10 flex flex-col items-center text-center relative overflow-hidden group border border-white/5">
+        <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:rotate-12 transition-transform duration-1000 pointer-events-none">
           <Sparkles className="w-16 h-16 text-[#df982a]" />
         </div>
         
-        <div className="absolute top-8 right-8 z-20">
+        <div className="absolute top-5 right-5 sm:top-8 sm:right-8 z-20">
           <button
+            type="button"
             onClick={() => signOut()}
             className="p-3 bg-white/5 backdrop-blur-md text-white rounded-2xl hover:bg-rose-500/80 transition-all active:scale-95 border border-white/10"
             title="Sair"
+            aria-label="Sair da conta"
           >
-            <LogOut className="w-6 h-6" />
+            <LogOut className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
         
-        <div className="relative z-10">
-          <div className="w-24 h-24 rounded-[2rem] border-4 border-[#df982a]/30 p-1.5 mb-4 shadow-2xl relative bg-slate-800 mx-auto">
-            <div className="w-full h-full rounded-[1.5rem] bg-gradient-to-br from-[#df982a] to-orange-600 flex items-center justify-center text-slate-950 text-3xl font-black uppercase shadow-inner">
-              {profile?.full_name?.charAt(0) || 'U'}
+        <div className="relative z-10 w-full min-w-0">
+          <label
+            htmlFor="avatar-upload-input"
+            className="block w-24 h-24 rounded-[2rem] border-4 border-[#df982a]/40 p-1 mb-4 shadow-2xl relative bg-slate-800 mx-auto cursor-pointer group/avatar"
+            title="Alterar foto de perfil"
+          >
+            <div className="w-full h-full rounded-[1.5rem] bg-gradient-to-br from-[#df982a] to-orange-600 flex items-center justify-center text-slate-950 text-3xl font-black uppercase shadow-inner overflow-hidden">
+              {uploadingAvatar ? (
+                <div className="w-6 h-6 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+              ) : avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={profile?.full_name || 'Foto de perfil'}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                profile?.full_name?.charAt(0) || 'U'
+              )}
             </div>
-            <div className="absolute -bottom-1 -right-1 p-2.5 bg-slate-950 rounded-2xl shadow-xl border border-white/10">
-              <Edit3 className="w-4 h-4 text-[#df982a]" />
+            <div className="absolute -bottom-1 -right-1 p-2 bg-slate-950 rounded-xl shadow-xl border border-amber-500/30 group-hover/avatar:bg-[#df982a] group-hover/avatar:text-slate-950 text-[#df982a] transition-colors">
+              <Camera className="w-4 h-4" />
             </div>
-          </div>
+            <input
+              id="avatar-upload-input"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploadingAvatar}
+              onChange={handleAvatarUpload}
+            />
+          </label>
 
-          <h2 className="text-2xl font-black text-white tracking-tight leading-none mb-2">{profile?.full_name || 'Usuário'}</h2>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+            Toque na foto para alterar
+          </p>
+          <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight mb-2 break-words">
+            {profile?.full_name || 'Usuário'}
+          </h2>
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-orange-500/10 text-[#df982a] border border-orange-500/20 text-[9px] font-black uppercase tracking-[0.2em] rounded-full shadow-lg">
             <Shield className="w-3 h-3" />
             {profile?.church_position || 'Membro'}
@@ -290,7 +377,7 @@ export const Profile: React.FC = () => {
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">RG</label>
                 <input
@@ -298,7 +385,7 @@ export const Profile: React.FC = () => {
                   value={formData.rg}
                   onChange={handleChange}
                   placeholder="00.000.000-0"
-                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white placeholder-slate-600"
+                  className="w-full px-5 sm:px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white placeholder-slate-600"
                 />
               </div>
               <div className="space-y-2">
@@ -308,19 +395,19 @@ export const Profile: React.FC = () => {
                   value={formData.cpf}
                   onChange={handleChange}
                   placeholder="000.000.000-00"
-                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white placeholder-slate-600"
+                  className="w-full px-5 sm:px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white placeholder-slate-600"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Gênero</label>
                 <select
                   name="gender"
                   value={formData.gender}
                   onChange={handleChange}
-                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20d%3D%22M19%209l-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_1.25rem_center] bg-no-repeat transition-all"
+                  className="w-full px-5 sm:px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20d%3D%22M19%209l-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_1.25rem_center] bg-no-repeat transition-all"
                 >
                   <option value="" className="bg-slate-900">Selecione</option>
                   <option value="M" className="bg-slate-900">Masculino</option>
@@ -333,7 +420,7 @@ export const Profile: React.FC = () => {
                   name="marital_status"
                   value={formData.marital_status}
                   onChange={handleChange}
-                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20d%3D%22M19%209l-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_1.25rem_center] bg-no-repeat transition-all"
+                  className="w-full px-5 sm:px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20d%3D%22M19%209l-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_1.25rem_center] bg-no-repeat transition-all"
                 >
                   <option value="" className="bg-slate-900">Selecione</option>
                   {maritalStatuses.map(s => <option key={s} value={s} className="bg-slate-900">{s}</option>)}
@@ -341,7 +428,7 @@ export const Profile: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Data Batismo</label>
                 <input
@@ -349,7 +436,7 @@ export const Profile: React.FC = () => {
                   name="baptism_date"
                   value={formData.baptism_date}
                   onChange={handleChange}
-                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white [color-scheme:dark]"
+                  className="w-full min-w-0 appearance-none px-5 sm:px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white [color-scheme:dark]"
                 />
               </div>
               <div className="space-y-2">
@@ -359,7 +446,7 @@ export const Profile: React.FC = () => {
                   name="marriage_date"
                   value={formData.marriage_date}
                   onChange={handleChange}
-                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white [color-scheme:dark]"
+                  className="w-full min-w-0 appearance-none px-5 sm:px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white [color-scheme:dark]"
                 />
               </div>
             </div>
@@ -373,15 +460,15 @@ export const Profile: React.FC = () => {
           onToggle={() => toggleSection('address')}
         >
           <div className="grid gap-6">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2 space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="sm:col-span-2 space-y-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Logradouro</label>
                 <input
                   name="address_street"
                   value={formData.address_street}
                   onChange={handleChange}
                   placeholder="Rua, Av..."
-                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white"
+                  className="w-full px-5 sm:px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white"
                 />
               </div>
               <div className="space-y-2">
@@ -391,7 +478,7 @@ export const Profile: React.FC = () => {
                   value={formData.address_number}
                   onChange={handleChange}
                   placeholder="123"
-                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white"
+                  className="w-full px-5 sm:px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-[#df982a] outline-none text-sm font-bold text-white"
                 />
               </div>
             </div>
@@ -403,11 +490,11 @@ export const Profile: React.FC = () => {
                 value={formData.address_neighborhood}
                 onChange={handleChange}
                 placeholder="Nome do bairro"
-                className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-50 focus:border-[#df982a] outline-none text-sm font-bold text-white"
+                className="w-full px-5 sm:px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-50 focus:border-[#df982a] outline-none text-sm font-bold text-white"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Cidade</label>
                 <input
@@ -415,7 +502,7 @@ export const Profile: React.FC = () => {
                   value={formData.address_city}
                   onChange={handleChange}
                   placeholder="Cidade"
-                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-50 focus:border-[#df982a] outline-none text-sm font-bold text-white"
+                  className="w-full px-5 sm:px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-50 focus:border-[#df982a] outline-none text-sm font-bold text-white"
                 />
               </div>
               <div className="space-y-2">
@@ -426,7 +513,7 @@ export const Profile: React.FC = () => {
                   onChange={handleChange}
                   maxLength={2}
                   placeholder="UF"
-                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-50 focus:border-[#df982a] outline-none text-sm font-bold text-white uppercase"
+                  className="w-full px-5 sm:px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-orange-50 focus:border-[#df982a] outline-none text-sm font-bold text-white uppercase"
                 />
               </div>
             </div>
@@ -618,12 +705,12 @@ export const Profile: React.FC = () => {
           </div>
         </ProfileSection>
 
-        {/* Fixed Save Button Container - Mobile First Optimized */}
-        <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#020617] via-[#020617]/95 to-transparent z-[50] safe-area-bottom">
+        {/* Save Button in Natural Scroll Flow - Always Accessible Above Bottom Nav */}
+        <div className="pt-4 pb-8">
           <button
             type="submit"
             disabled={loading}
-            className="w-full max-w-lg mx-auto py-5 bg-[#df982a] text-slate-950 font-black uppercase tracking-[0.25em] rounded-[1.8rem] shadow-[0_20px_50px_rgba(223,152,42,0.3)] hover:bg-orange-600 disabled:opacity-50 flex items-center justify-center gap-3 transition-all duration-300 active:scale-95 border-b-4 border-orange-700/50"
+            className="w-full py-5 bg-[#df982a] text-slate-950 font-black uppercase tracking-[0.22em] rounded-[1.8rem] shadow-[0_20px_50px_rgba(223,152,42,0.3)] hover:bg-orange-600 disabled:opacity-50 flex items-center justify-center gap-3 transition-all duration-300 active:scale-95 border-b-4 border-orange-700/50"
           >
             {loading ? (
               <div className="w-6 h-6 border-4 border-slate-950 border-t-transparent rounded-full animate-spin" />

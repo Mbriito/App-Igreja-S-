@@ -14,17 +14,39 @@ export const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
+  const translateAuthError = (msg: string) => {
+    if (msg === 'Invalid login credentials') {
+      return 'E-mail ou senha incorretos. Verifique seus dados e tente novamente.';
+    }
+    if (msg === 'Email not confirmed') {
+      return 'Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou peça ao admin para confirmar sua conta.';
+    }
+    if (msg.includes('User already registered')) {
+      return 'Este e-mail já está cadastrado. Tente fazer login ou recuperar sua senha.';
+    }
+    if (msg.includes('Password should be at least')) {
+      return 'A senha deve ter no mínimo 6 caracteres.';
+    }
+    return msg;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const normalizedEmail = email.trim().toLowerCase();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
 
-    if (error) {
-      setError(error.message === 'Email not confirmed' 
-        ? 'Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou peça ao admin para desabilitar a confirmação no Supabase.' 
-        : error.message);
+    if (error || !data.session) {
+      setError(
+        error
+          ? translateAuthError(error.message)
+          : 'Não foi possível iniciar a sessão. Tente novamente.'
+      );
       setLoading(false);
     } else {
       navigate('/');
@@ -36,12 +58,12 @@ export const Login: React.FC = () => {
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
       redirectTo: `${window.location.origin}/reset-password`,
     });
 
     if (error) {
-      setError(error.message);
+      setError(translateAuthError(error.message));
     } else {
       setResetSent(true);
     }
@@ -148,7 +170,7 @@ export const Login: React.FC = () => {
             </div>
             <p className="text-[10px] text-[#df982a] font-black uppercase tracking-[0.4em] flex items-center justify-center gap-2">
               <Sparkles className="w-3 h-3" />
-              A Igreja da Vila - SÉ
+              Igreja da Vila Sé
             </p>
           </div>
         </div>
@@ -252,17 +274,23 @@ export const Register: React.FC = () => {
     setError(null);
 
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: email.trim().toLowerCase(),
       password,
       options: {
         data: {
-          full_name: fullName,
+          full_name: fullName.trim(),
         },
       },
     });
 
     if (error) {
-      setError(error.message);
+      setError(
+        error.message.includes('User already registered')
+          ? 'Este e-mail já está cadastrado.'
+          : error.message.includes('Password should be at least')
+          ? 'A senha deve ter no mínimo 6 caracteres.'
+          : error.message
+      );
       setLoading(false);
     } else {
       if (data.session) {

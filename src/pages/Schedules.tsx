@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, User, ChevronLeft, ChevronRight, MapPin, Search, Sparkles, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, User, ChevronLeft, ChevronRight, MapPin, Search, Sparkles, ChevronRight as ChevronRightIcon, Settings2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -15,6 +17,7 @@ interface Schedule {
 }
 
 export const Schedules: React.FC = () => {
+  const { profile } = useAuth();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -40,29 +43,44 @@ export const Schedules: React.FC = () => {
   );
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000 pb-10">
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-3">
-          <div className="h-1.5 w-10 bg-[#df982a] rounded-full shadow-[0_0_15px_#df982a]"></div>
-          <span className="text-[10px] font-black text-[#df982a] uppercase tracking-[0.4em]">Agenda</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h2 className="text-4xl font-black text-white tracking-tighter leading-none uppercase">Escalas</h2>
-            <p className="text-sm text-slate-500 font-bold uppercase tracking-widest mt-1">Servindo com amor na Vila</p>
+    <div className="w-full max-w-full overflow-hidden space-y-8 sm:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000 pb-16">
+      <div className="flex flex-col gap-4 min-w-0">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <div className="h-1.5 w-10 bg-[#df982a] rounded-full shadow-[0_0_15px_#df982a]"></div>
+            <span className="text-[10px] font-black text-[#df982a] uppercase tracking-[0.4em]">Agenda</span>
           </div>
-          <div className="flex items-center bg-slate-900 rounded-3xl p-1.5 border border-white/5 shadow-2xl">
-            <button 
-              onClick={() => setSelectedDate(addDays(selectedDate, -7))}
-              className="p-3 hover:bg-white/5 rounded-[1.25rem] transition-all active:scale-90 text-slate-400 hover:text-white"
+          {profile?.role === 'admin' && (
+            <Link
+              to="/admin?tab=schedules"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[#df982a] text-[10px] font-black uppercase tracking-wider hover:bg-amber-500/20 transition-all"
             >
-              <ChevronLeft className="w-6 h-6" />
+              <Settings2 className="w-3.5 h-3.5" />
+              Gerenciar
+            </Link>
+          )}
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="space-y-1 min-w-0 flex-1">
+            <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tighter leading-none uppercase">Escalas</h2>
+            <p className="text-xs sm:text-sm text-slate-500 font-bold uppercase tracking-widest mt-1">Servindo com amor na Vila</p>
+          </div>
+          <div className="flex items-center bg-slate-900 rounded-2xl sm:rounded-3xl p-1 border border-white/5 shadow-2xl flex-shrink-0">
+            <button 
+              type="button"
+              onClick={() => setSelectedDate(addDays(selectedDate, -7))}
+              className="p-2.5 sm:p-3 hover:bg-white/5 rounded-xl sm:rounded-[1.25rem] transition-all active:scale-90 text-slate-400 hover:text-white"
+              aria-label="Semana anterior"
+            >
+              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
             <button 
+              type="button"
               onClick={() => setSelectedDate(addDays(selectedDate, 7))}
-              className="p-3 hover:bg-white/5 rounded-[1.25rem] transition-all active:scale-90 text-slate-400 hover:text-white"
+              className="p-2.5 sm:p-3 hover:bg-white/5 rounded-xl sm:rounded-[1.25rem] transition-all active:scale-90 text-slate-400 hover:text-white"
+              aria-label="Próxima semana"
             >
-              <ChevronRight className="w-6 h-6" />
+              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </div>
         </div>

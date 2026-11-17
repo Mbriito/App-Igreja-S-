@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminToast } from '@/contexts/AdminToastContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Heart, Plus, Send, Shield, MessageSquare, X, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
@@ -23,6 +24,7 @@ interface PrayerRequest {
 
 export const Prayers: React.FC = () => {
   const { user, profile } = useAuth();
+  const { showAdminToast } = useAdminToast();
   const [prayers, setPrayers] = useState<PrayerRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -141,7 +143,11 @@ export const Prayers: React.FC = () => {
 
       setPrayers((prev) => prev.filter((p) => p.id !== id));
       setPrayerToDelete(null);
-      showFeedback('success', 'Pedido de oração excluído com sucesso!');
+      if (profile?.role === 'admin') {
+        showAdminToast('Pedido de oração excluído do mural!');
+      } else {
+        showFeedback('success', 'Pedido de oração excluído com sucesso!');
+      }
     } catch {
       showFeedback('error', 'Erro inesperado ao excluir o pedido de oração.');
     } finally {
